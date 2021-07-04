@@ -43,12 +43,12 @@ glimpse(episodes_24)
 dbDisconnect(con)
 
 
-
 # Font: https://www.1001fonts.com/digital+clock-fonts.html
 library(extrafont)
 font_import(pattern = "digital-7", prompt = FALSE)
 loadfonts()
 
+# Color scheme for 24
 colors <- c(
   "yellow" = "#FFE669",
   "orange" = "#D18B0F",
@@ -57,6 +57,7 @@ colors <- c(
   "lightgrey" = "#BAC2C2"
 )
 
+# Custom ggplot theme
 theme_24 <- function(base_family = "Lato", base_size = 8, ...) {
   theme_minimal(base_family = base_family, base_size = base_size, ...) +
   theme(
@@ -66,7 +67,7 @@ theme_24 <- function(base_family = "Lato", base_size = 8, ...) {
     text = element_text(color = "grey89"),
     plot.title = element_markdown(color = "grey98", family = "Lato Black",
                                   size = base_size * 1.75,
-                                  margin = margin(t = 6, b = 12)),
+                                  margin = margin(t = 12, b = 12)),
     plot.subtitle = element_markdown(size = base_size),
     plot.caption = element_markdown(size = base_size * 0.8),
     axis.text = element_text(color = "grey80"),
@@ -79,91 +80,6 @@ theme_24 <- function(base_family = "Lato", base_size = 8, ...) {
 }
 
 theme_set(theme_24())
-# update_geom_defaults("line", list(color = colors["yellow"]))
-
-
-episodes_24 %>% 
-  ggplot(aes(episodeNumber, averageRating, group = factor(seasonNumber))) +
-  with_outer_glow(
-    geom_line(size = 0.8, col = colors["yellow"]),
-    # color = colors["orange"],
-    # color = colors["darkgrey"],
-    color = "white",
-    sigma = 6,
-    expand = 12
-  )  +
-  scale_x_continuous(breaks = seq(4, 24, 4)) +
-  coord_cartesian(ylim = c(7, 10)) +
-  labs(x = "Episode", 
-       y = "Average Rating") +
-  facet_wrap(vars(seasonNumber), 
-             ncol = 4,
-             labeller = as_labeller(function(x) {
-               glue::glue("<span style='font-size:6pt; color: #BBBBBB'>Season</span> {x}")
-               })
-             )
-
-ggsave("plots/24_episode_rating_allseasons.png", type = "cairo", width = 8, height = 4)
-
-average_rating_season <- episodes_24  %>% 
-  group_by(seasonNumber) %>% 
-  mutate(rating_votes = averageRating * numVotes) %>% 
-  summarize(wgt_avg_season_rating = sum(rating_votes) / sum(numVotes),
-            avg_season_rating = mean(averageRating))
-
-
-episodes_24 %>% 
-  inner_join(average_rating_season, by = "seasonNumber") %>% 
-  ggplot(aes(episodeNumber, averageRating, group = factor(seasonNumber))) +
-  geom_segment(aes(xend = episodeNumber, 
-                   y = wgt_avg_season_rating, yend = averageRating),
-               col = colors["greybrown"],
-               lty = "solid",
-               size = 0.3) +
-  geom_hline(aes(yintercept = wgt_avg_season_rating, 
-                 col = colors["orange"]),
-             size = 0.75, lty = "solid", alpha = 0.7
-  ) +
-  geom_point(aes(col = colors["yellow"], size = numVotes),
-             # size = 0.5
-             ) +
-  # Annotations in plot
-  geom_richtext(data = tibble(episodeNumber = 0, averageRating = 8.45, 
-                          seasonNumber = 1,
-                          label = "Weighted season average"),
-            aes(label = label),
-            col = "white", fill = colors["orange"], alpha = 0.8,
-            size = 2,
-            family = "Lato",
-            label.r = unit(0.0, "lines"), label.size = NA, 
-            label.padding = unit(0.1, "lines"),
-            hjust = 0, angle = 90) +
-  # geom_curve(data = tibble(episodeNumber = 1, averageRating = 9, 
-  #                                 seasonNumber = 1),
-  #            aes(xend = episodeNumber, y = averageRating, yend = 8.4),
-  #            col = "grey89", size = 0.1,
-  #            curvature = 0.05,
-  #            arrow = arrow(length = unit(2, "mm"), type = "closed")) +
-  scale_x_continuous(breaks = seq(4, 24, 4)) +
-  scale_y_continuous(breaks = seq(8, 9.5, 0.5)) +
-  scale_size_continuous(range = c(0.2, 2)) +
-  scale_color_identity(
-    name = NULL,
-    breaks = colors[c("orange", "yellow")],
-    labels = c("Weighted season average", "Episode rating"),
-    # guide = "legend"
-    ) +
-  coord_cartesian(ylim = c(7.5, 9.5)) +
-  labs(x = "Episode", 
-       y = "Average Rating") +
-  facet_wrap(vars(seasonNumber), 
-             ncol = 4,
-             labeller = as_labeller(function(x) {
-               glue::glue("<span style='font-size:6pt; color: #BBBBBB'>Season</span> {x}")
-             })
-  )
-
-ggsave("plots/24_episode_rating_allseasons_points.png", type = "cairo", width = 9, height = 5)
 
 
 
@@ -182,6 +98,13 @@ geom_curve2 <- function(..., curvature = 0.2) {
              arrow = arrow(length = unit(0.75, "mm"), type = "closed"),
              ...) 
 }
+
+
+average_rating_season <- episodes_24  %>% 
+  group_by(seasonNumber) %>% 
+  mutate(rating_votes = averageRating * numVotes) %>% 
+  summarize(wgt_avg_season_rating = sum(rating_votes) / sum(numVotes),
+            avg_season_rating = mean(averageRating))
 
 episodes_24_cont <- episodes_24 %>% 
   arrange(seasonNumber, episodeNumber) %>% 
@@ -238,7 +161,7 @@ episodes_24_cont %>%
   # Annotations
   annotate_richtext(label = "S1 E24 is the best rated<br>episode (9.3)",
            x = 7, y = 9.4) +
-  geom_curve2(aes(x = 18, xend = 23.25, y = 9.35, yend = 9.3)) +
+  geom_curve2(aes(x = 18.25, xend = 23.25, y = 9.35, yend = 9.3)) +
   annotate_richtext(label = "7.8: S8 E9 has<br>the lowest rating",
                     x = 185, y = 7.85) +
   geom_curve2(aes(x = 185, xend = 181, y = 7.8, yend = 7.8), curvature = -0.2) +
@@ -268,5 +191,3 @@ episodes_24_cont %>%
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 invisible(dev.off())
-# ggsave("plots/24_episode_rating_allseasons_points_nofacets.png", type = "cairo", width = 8, height = 4)
-
