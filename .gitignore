@@ -38,5 +38,9 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+# R datasets
+**/*.rds
+
 # SQLite database files
-*.db
+**/*.db
+
