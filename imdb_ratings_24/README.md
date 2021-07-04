@@ -31,8 +31,6 @@ And guess it's my first waterfall chart ever
 
 </blockquote>
 
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-
 ## Data
 
 Ratings are averaged ratings from IMDB users, which can be downloaded
