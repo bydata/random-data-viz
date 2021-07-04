@@ -44,3 +44,5 @@ vignettes/*.pdf
 # SQLite database files
 **/*.db
 
+# archives
+**/*.tsv.gz
