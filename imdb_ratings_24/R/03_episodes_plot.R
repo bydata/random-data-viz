@@ -69,7 +69,7 @@ theme_24 <- function(base_family = "Lato", base_size = 8, ...) {
                                   size = base_size * 1.75,
                                   margin = margin(t = 12, b = 12)),
     plot.subtitle = element_markdown(size = base_size),
-    plot.caption = element_markdown(size = base_size * 0.8),
+    plot.caption = element_markdown(size = base_size * 0.8, color = "grey80"),
     axis.text = element_text(color = "grey80"),
     strip.text = element_markdown(color = colors["yellow"], 
                               family = "Digital-7 Mono", size = 18,
