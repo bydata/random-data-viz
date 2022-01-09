@@ -1,4 +1,5 @@
-pacman::p_load("tidyverse", "ggtext", "here", "glue", "lubridate")
+# remotes::install_github("AllanCameron/geomtextpath")
+pacman::p_load("tidyverse", "ggtext", "here", "glue", "lubridate", "geomtextpath")
 
 # Load data
 owid_url <- "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
@@ -14,7 +15,8 @@ covid_us <- covid %>%
            fill = list(new_cases = 0, new_cases_smoothed = 0)) %>% 
   mutate(day_of_year = yday(date),
          year = year(date),
-         row = row_number())
+         # row = row_number()
+         )
 
 # months_abbr <- unique(month(covid_us$date, label = TRUE))
 month_length <- c(31, 29, 31, 30, 31, 30,
@@ -41,15 +43,28 @@ text_color <- rgb(18, 18, 18, maxColorValue = 255)
 subtitle_date <- max(covid_us$date) %>% 
   format("%b. %d, %Y")
 
-ragg::agg_png(here("nyt-spiral-chart", "plots", "nyt_spiral_geom_ribbon.png"),
+year_annotations <- list(
+  year = 2020:2022,
+  x = rep(3, 3),
+  y = as.POSIXct(paste(2020:2022, "01", "01", sep = "-"))
+)
+
+
+ragg::agg_png(here("nyt-spiral-chart", "plots", "nyt_spiral.png"),
               res = 300, width = 1500, height = 1500)
-covid_us %>% 
+p <- covid_us %>% 
+  # 2020 is a leap year, we could drop Feb 29, 2020 for the sake of consistent 365-day years
+  filter(date != as_date("2020-02-29")) %>%
+  group_by(year) %>%
+  mutate(day_of_year = row_number()) %>%
+  ungroup() %>%
   ggplot() +
   # area
   geom_ribbon(aes(x = day_of_year, 
                   ymin = as.POSIXct(date) - new_cases_smoothed / 2 * size_factor,
                   ymax = as.POSIXct(date) + new_cases_smoothed / 2 * size_factor,
-                  group = year),
+                  group = year
+                  ),
               color = outline_color,
               size = 0.3,
               # fill = alpha(outline_color, 0.5),
@@ -70,16 +85,25 @@ covid_us %>%
            x = 20, xend = 22.5, 
            y = as.POSIXct("2021-06-01"), yend = as.POSIXct("2021-03-15"),
            color = text_color, size = 0.3) +
+  
+  # annotation: years
+  annotate("text", label = paste0(year_annotations$year, "\u2192"), x = year_annotations$x, 
+           y = year_annotations$y, 
+           # angle = -1,
+           family = "Arial", size = 2, vjust = -0.6, hjust = 0.4) +   
+  
   scale_x_continuous(minor_breaks = month_breaks, 
                      breaks = month_breaks[c(1, 4, 7, 10)],
                      # labels = month.abb
                      # labels = month.abb[c(1, 4, 7, 10)]
                      labels = c("Jan.", "April", "July", "Oct."),
-                     limits = c(1, NA)
+                     limits = c(1, 365),
+                     expand = c(0, 0)
                      ) +
   #' set the lower limit of the y-axis to a date before 2020 
   #' so that the spiral does not start in the center point
-  scale_y_continuous(limits = c(as.POSIXct("2019-07-01"), NA)) +
+  scale_y_continuous(limits = c(as.POSIXct("2019-07-01"), NA),
+                     expand = expansion(mult = c(NA, 0))) +
   coord_polar() +
   labs(
     subtitle = subtitle_date
@@ -95,7 +119,35 @@ covid_us %>%
   )
 invisible(dev.off())
 
-# ggsave(here("nyt-spiral-chart", "plots", "nyt_spiral_geom_ribbon.png"),
-#        dpi = 300, width = 5, height = 5)
-  
-  
+# Inset legend
+p_legend <- 
+tibble(
+  cases = c(0, 150000),
+  ymin = c(0, -75000),
+  ymax = c(0, 75000),
+) %>% 
+  ggplot(aes(cases)) +
+  geom_ribbon(aes(ymin = size_factor * ymin, ymax = size_factor * ymax),
+              color = outline_color, fill = "#F2C2C3", size = 0.3) +
+  geom_line(aes(y = 1), color = base_grey) +
+  geom_text(aes(label = ifelse(cases == 0, 0, "150k cases"), 
+                y = 1, hjust = ifelse(cases == 0, 1.5, -0.1)),
+            size = 2) +
+  coord_cartesian(xlim = c(0, 350000), 
+                  # ylim = c(-as.numeric(as.POSIXct("1971-01-01")) / 2, 
+                  #          as.numeric(as.POSIXct("1971-01-01")) / 2), 
+                  ylim = c(-as.numeric(as.POSIXct("1971-01-01")), NA), 
+                  clip = "off") + 
+  labs(title = "New Covid-19 cases,<br>United States") +
+  theme_void() +
+  theme(plot.title = element_markdown(color = text_color, family = "Helvetica",
+                                      face = "bold", size = 8, hjust = 0.5,
+                                      lineheight = 1.1))
+
+
+ # library(patchwork)
+ragg::agg_png(here("nyt-spiral-chart", "plots", "nyt_spiral_with-legend.png"),
+              res = 300, width = 1500, height = 1500)
+p + inset_element(p_legend, left = 0.05, bottom = 0.725, right = 0.25, top = 0.95)
+invisible(dev.off())
+
