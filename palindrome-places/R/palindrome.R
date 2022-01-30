@@ -21,7 +21,7 @@ library(sf)
 country <- "Germany"
 
 # where to store the data
-data_dir <- "palindrome-places"
+data_dir <- here::here("palindrome-places", "data")
 
 
 # Checks if a string is a palindrome
@@ -43,6 +43,10 @@ download_and_unzip_geonames <- function(country,
                                            destination = "iso2c")
   geonames_url <- glue::glue("http://download.geonames.org/export/dump/{country_code}.zip")
   geonames_localfile_zip <- here::here(data_dir, glue::glue("geonames_{tolower(country_code)}.zip"))
+  
+  if (!dir.exists(data_dir)) {
+    dir.create(data_dir)
+  }
   
   download.file(geonames_url, destfile = geonames_localfile_zip)
   geonames_localfile <- unzip(geonames_localfile_zip, list = TRUE) %>% 
