@@ -89,7 +89,6 @@ places_palindromes_transformed <- places_palindromes %>%
   select(longitude, latitude, name, name2) %>% 
   usmap_transform()
 
-
 n_categories <- count(places_palindromes, name2, sort = TRUE) %>% 
   filter(name2 != "Other") %>% 
   nrow()
