@@ -12,7 +12,8 @@ library(sf)
 #' However, adjustments might be necessary:
 #' a) If a country has offshore areas (e.g. Netherlands, France) you might want to
 #'    limit the coordinate system using coord_sf()
-#' b) When saving the plot, adapt to the country's shape (TODO)    
+#' b) When saving the plot, the aspect ratio is determined from the rectangular 
+#'    bounding box of the country. Maybe needs some adjustments.
 #' c) Too many overlaps among text labels (ggrepel)
 #' 
 #' Note: Not checked for non-Latin-letter names
@@ -93,6 +94,19 @@ nrow(places_palindromes)
 shp <- rnaturalearth::ne_countries(scale = 10, country = country, 
                                    returnclass = "sf")
 
+# determine a good aspect ratio to save the plot
+shorter_side_length <- 5
+bbox <- st_bbox(shp)
+width_height_ratio <- abs(bbox["xmax"] - bbox["xmin"]) / abs(bbox["ymax"] - bbox["ymin"])
+width_height_ratio <- unname(width_height_ratio)
+if (width_height_ratio > 1) {
+  width <- width_height_ratio * shorter_side_length
+  height <- shorter_side_length + 2.5  # add some for titles 
+} else {
+  width <-  shorter_side_length
+  height <- shorter_side_length * width_height_ratio + 2.5 
+}
+
 # Annotations
 plot_titles <- list(
   title = glue::glue("Palindromic place names in {country}"),
@@ -122,8 +136,7 @@ p1 <- ggplot(shp) +
   )
 ggsave(here::here("palindrome-places", "plots", 
                   glue::glue("palindrome_places_{country}.png")), 
-       dpi = 600, width = 6, height = 8)
-# adapt width and height to country shape
+       dpi = 600, width = width, height = height)
 
 
 n_categories <- count(places_palindromes, name2, sort = TRUE) %>% 
@@ -155,7 +168,7 @@ p2 <- ggplot(shp) +
   )
 ggsave(here::here("palindrome-places", "plots", 
                   glue::glue("palindrome_places_{country}-coloured.png")), 
-       dpi = 600, width = 6, height = 8)
+       dpi = 600, width = width, height = height) 
 
 count(places_palindromes, name, sort = TRUE)
 
