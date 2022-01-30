@@ -1,4 +1,4 @@
 .DS_Store
-*.txt
-*.zip
-readme.txt
+data/*.txt
+data/*.zip
+data/readme.txt
