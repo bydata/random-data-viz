@@ -14,9 +14,12 @@ library(sf)
 #'    limit the coordinate system using coord_sf()
 #' b) When saving the plot, adapt to the country's shape (TODO)    
 #' c) Too many overlaps among text labels (ggrepel)
+#' 
+#' Note: Not checked for non-Latin-letter names
 
-# which country
-country <- "Canada"
+# which country >>>>>
+country <- "Germany"
+
 # where to store the data
 data_dir <- "palindrome-places"
 
@@ -94,7 +97,7 @@ plot_titles <- list(
        **Visualization:** Ansgar Wolsing"
 )
 
-ggplot(shp) +
+p1 <- ggplot(shp) +
   geom_sf(size = 0.2) +
   geom_point(data = places_palindromes,
              aes(longitude, latitude),
@@ -123,7 +126,7 @@ n_categories <- count(places_palindromes, name2, sort = TRUE) %>%
   filter(name2 != "Other") %>% 
   nrow()
 
-ggplot(shp) +
+p2 <- ggplot(shp) +
   geom_sf(size = 0.2) +
   geom_point(data = places_palindromes,
              aes(longitude, latitude, fill = name2),
@@ -151,3 +154,4 @@ ggsave(here::here("palindrome-places", "plots",
        dpi = 600, width = 6, height = 8)
 
 count(places_palindromes, name, sort = TRUE)
+
