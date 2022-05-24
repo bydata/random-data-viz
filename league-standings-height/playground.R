@@ -23,7 +23,7 @@ final_matchdays <- bind_rows(final_matchday_tables, .id = "season")
 final_matchdays <- final_matchdays %>% 
   distinct()
 
-df_plot <- final_matchdays %>% 
+final_matchdays %>% 
   filter(season >= "1995") %>% 
   mutate(season_fmt = paste(
     str_sub(season, 3, 4), 
@@ -33,17 +33,10 @@ df_plot <- final_matchdays %>%
   season_fmt = fct_inorder(season_fmt),
   squad_highlights = case_when(
     squad %in% c("Man City", "Man Utd", "Liverpool", "Chelsea", "Arsenal") ~ squad,
-    TRUE ~ "Other"
-  ))
-
-df_plot %>% 
-  filter(rk == 16) %>% 
-  select(season, rk, pts)
-
-
-p <- df_plot %>% 
+    TRUE ~ "Other teams"
+  )) %>% 
   ggplot(aes(season_fmt, pts, group = factor(rk))) +
-  # indicate different outcomes: relegation
+  # indicate relegation
   geom_rect(
     data = ~subset(., rk == 18),
     aes(xmin = as.numeric(season_fmt) - 0.25, xmax = as.numeric(season_fmt) + 0.25, 
@@ -65,21 +58,24 @@ p <- df_plot %>%
     size = 1.5, nudge_y = 2, family = "Noto Sans Kannada Light"
   ) +
   # Annotate season in the plot
-  geom_text(aes(y = 106, label = season_fmt),
-            size = 2, family = "Chivo", color = "grey40") +
+  geom_label(aes(y = 106, label = season_fmt),
+            size = 2, family = "Chivo", color = "grey40", label.size = 0, 
+            label.r = unit(0, "mm"), fill = "white") +
   scale_x_discrete(position = "top") +
   scale_y_continuous(position = "right", expand = expansion(add = c(1, 2))) +
   scale_fill_manual(values = c("Man City" = "skyblue",
                                "Liverpool" = "#C8102E", "Man Utd" = "darkred",
                                "Chelsea" = "darkblue", "Arsenal" = "#9C824A",
-                               "Other" = "grey51")) +
+                               "Other teams" = "grey51")) +
   guides(fill = guide_legend(nrow = 1)) +
   labs(
-    title = "Premier League Point Distributions per Season",
+    title = "Premier League Point Distribution per Season",
     subtitle = "Each season since 1995-1996 - the first season with 20 teams in the 
     Premier League - is represented by a column.<br>The teams are placed based on 
-    their points in the final table.",
-    caption = "**Data:** Transfermarkt, worldfootballR R package. **Visualization:** Ansgar Wolsing",
+    their points in the final table. The points that led to relegation are shown 
+    with a bit darker grey area.",
+    caption = "**Data:** Transfermarkt, worldfootballR R package.
+    **Visualization:** Ansgar Wolsing",
     x = NULL, #"Season",
     y = "Points",
     fill = NULL
@@ -102,11 +98,3 @@ p <- df_plot %>%
   )
 ggsave(here(base_path, "premier-league-final-tables.png"), width = 9.5, height = 5)
 
-# p + 
-#   coord_flip() +
-#   theme(
-#     panel.grid.major.y = element_line(size = 3, color = "grey80"),
-#     panel.grid.major.x = element_line(size = 0.1, color = "grey80"),
-#     
-#   )
-# ggsave(here(base_path, "foo-flipped.png"), width = 9, height = 5)
