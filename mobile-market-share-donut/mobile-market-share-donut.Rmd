@@ -1,0 +1,169 @@
+---
+title: "Mobile Market Share Animated Donut"
+author: "Ansgar Wolsing"
+date: "6/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+
+```{r packages}
+library(tidyverse)
+library(gganimate)
+library(ggtext)
+library(lubridate)
+```
+
+## Get the data
+
+Statcounter provides mobile vendor market share back to 2010. The original video goes back to the 1990s. The data can be downloaded in CSV format via https://gs.statcounter.com/vendor-market-share/mobile/worldwide/#monthly-201003-202205
+After the download, place the CSV file in your project directory.
+
+```{r read_data}
+filename <- "vendor-ww-monthly-201003-202205.csv"
+df_raw <- read_csv(filename)
+
+```
+
+## Transform the data
+
+Transform the data to long format for our next steps.
+
+```{r transform_data}
+threshold_for_lumping <- 5
+
+df_long <- df_raw %>%
+  pivot_longer(cols = -Date, names_to = "vendor", values_to = "market_share") %>% 
+  # group vendors with smaller market shares to "Other" based on monthly shares
+  mutate(vendor2 = ifelse(market_share < threshold_for_lumping | 
+                            vendor == "Unknown", "Other", vendor),
+         date = ym(Date)) %>% 
+  filter(date > as_date("2010-03-01")) %>% 
+  count(date, vendor2, wt = market_share, name = "market_share")
+
+```
+
+The first few rows of the transformed dataframe:
+
+```{r}
+head(df_long)
+```
+
+All grouped vendors:
+
+```{r}
+unique(df_long$vendor2)
+```
+
+
+
+## First plot with facets
+
+```{r first_plot}
+
+df_long %>% 
+  filter(date <= as_date("2011-03-01")) %>% 
+  ggplot(aes(vendor2, market_share)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(vars(date))
+
+```
+
+## Create a donut chart with ggplot2
+
+
+{ggpubr} is great for creating several chart types, include donut charts. However, for our animation we will build the plot from scratch in {ggplot2}.
+
+
+### Start with a pie chart
+
+```{r first_pie}
+p <- df_long %>% 
+  filter(date == as_date("2022-05-01")) %>%
+  arrange(date, market_share) %>% 
+  mutate(label_pos = cumsum(market_share) / sum(market_share) 
+         - 0.5 * market_share /  sum(market_share),
+         label = sprintf("%s<br>%s %%", vendor2, market_share),
+         # label = fct_reorder(label, -market_share),
+         vendor2 = fct_reorder(vendor2, -market_share)) %>% 
+  ggplot(aes(x = 1, market_share, group = vendor2)) +
+  geom_col(aes(fill = vendor2), position = "fill") +
+  geom_richtext(aes(x = 1.5, label = label, y = label_pos)) +
+  paletteer::scale_fill_paletteer_d("palettetown::dratini") +
+  coord_polar(theta = "y") +
+  guides(fill = "none") +
+  theme_void()
+p
+
+```
+
+
+### ... and the donut
+
+We just simply add a white circle on top of the pie chart. Voilà, a donut chart.
+Adjust `donut_hole_width` to increase or decrease the donut bar. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
+
+```{r}
+
+donut_hole_width <- 0.9
+
+p_donut <- p + 
+  annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
+           fill = "white") +
+  geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
+            size = 8)
+p_donut
+
+```
+
+## First animation
+
+
+```{r}
+
+p_donut <- 
+  df_long %>% 
+  # filter(date == as_date("2022-05-01")) %>%
+  # filter(date >= as_date("2020-05-01")) %>%
+  mutate(vendor2 = factor(vendor2, levels = unique(df_long$vendor2))) %>% 
+  # arrange(date, vendor2) %>% 
+  # now we need to calculate the label position within each month
+  group_by(date) %>% 
+  arrange(desc(vendor2), .by_group = TRUE) %>% 
+  mutate(label_pos = cumsum(market_share) / sum(market_share)  
+         - 0.5 * market_share / sum(market_share),
+         label = sprintf("%s\n%s %%", vendor2, 
+                         scales::number(market_share, accuracy = 0.1)),
+         label = fct_reorder(label, market_share)
+         # vendor2 = fct_reorder(vendor2, -market_share)
+         ) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = 1, market_share, group = vendor2)) +
+  geom_col(aes(fill = vendor2), position = "fill") +
+  ggrepel::geom_text_repel(aes(x = 1.5, label = label, y = label_pos),
+                hjust = 0, family = "Fira Sans",
+                min.segment.length = 0, nudge_x = 0.3, point.padding = 1e-05,
+                label.padding = 0.3) +
+  paletteer::scale_fill_paletteer_d("palettetown::dratini", direction = -1) +
+  # paletteer::scale_color_paletteer_d("palettetown::dratini") +
+  coord_polar(theta = "y") +
+  guides(fill = "none", color = "none") +
+  theme_void(base_family = "Fira Sans") + 
+  annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
+           fill = "white") +
+  geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
+            size = 8)
+
+p_anim <- p_donut +
+  transition_states(date)
+
+anim <- animate(p_anim, res = 100, width = 600, height = 600, fps = 10)
+anim_save("animated-donut-chart.gif", anim)
+
+```
+
