@@ -34,7 +34,7 @@ df_raw <- read_csv(filename)
 Transform the data to long format for our next steps.
 
 ```{r transform_data}
-threshold_for_lumping <- 5
+threshold_for_lumping <- 3.1
 
 df_long <- df_raw %>%
   pivot_longer(cols = -Date, names_to = "vendor", values_to = "market_share") %>% 
@@ -110,7 +110,7 @@ Adjust `donut_hole_width` to increase or decrease the donut bar. A value of 0 wi
 
 ```{r}
 
-donut_hole_width <- 0.9
+donut_hole_width <- 0.75
 
 p_donut <- p + 
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
@@ -124,12 +124,11 @@ p_donut
 ## First animation
 
 
-```{r}
+```{r animation}
 
 p_donut <- 
   df_long %>% 
   # filter(date == as_date("2022-05-01")) %>%
-  # filter(date >= as_date("2020-05-01")) %>%
   mutate(vendor2 = factor(vendor2, levels = unique(df_long$vendor2))) %>% 
   # arrange(date, vendor2) %>% 
   # now we need to calculate the label position within each month
@@ -146,24 +145,43 @@ p_donut <-
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
   ggrepel::geom_text_repel(aes(x = 1.5, label = label, y = label_pos),
-                hjust = 0, family = "Fira Sans",
+                hjust = 0, family = "Fira Sans", segment.size = 0.3,
                 min.segment.length = 0, nudge_x = 0.3, point.padding = 1e-05,
-                label.padding = 0.3) +
-  paletteer::scale_fill_paletteer_d("palettetown::dratini", direction = -1) +
+                label.padding = 0.3, color = "white") +
+  # paletteer::scale_fill_paletteer_d("palettetown::dratini", direction = -1) +
+  # paletteer::scale_fill_paletteer_d("ggthemes::Jewel_Bright") +
+  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
   # paletteer::scale_color_paletteer_d("palettetown::dratini") +
   coord_polar(theta = "y") +
   guides(fill = "none", color = "none") +
-  theme_void(base_family = "Fira Sans") + 
+  # semi-transparent ring
+  annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
+           fill = alpha("grey4", 0.25)) +
+  # inner ring
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
-           fill = "white") +
-  geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
-            size = 8)
+           fill = "grey4") +
+  # geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
+  #           size = 8, family = "Fira Sans SemiBold", color = "white")
+  geom_richtext(
+    aes(x = 0, y = 0,
+        label = sprintf(
+          "<span style='color: grey80'>%s</span><br><span style='font-size: 40pt'>%s</span>", 
+          format(date, "%B"), year(date))), 
+                stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
+                fill = NA, label.size = 0, lineheight = 1.67) +
+  theme_void(base_family = "Fira Sans") + 
+  theme(
+    plot.background = element_rect(color = NA, fill = "grey4"),
+    plot.margin = margin(10, 10, 10, 10)
+  )
 
 p_anim <- p_donut +
   transition_states(date)
 
-anim <- animate(p_anim, res = 100, width = 600, height = 600, fps = 10)
+anim <- animate(p_anim, res = 100, width = 600, height = 600, fps = 12,
+                duration = 60)
 anim_save("animated-donut-chart.gif", anim)
 
 ```
 
+![](animated-donut-chart.gif)
