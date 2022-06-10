@@ -148,20 +148,12 @@ p_donut <-
                 hjust = 0, family = "Fira Sans", segment.size = 0.3,
                 min.segment.length = 0, nudge_x = 0.3, point.padding = 1e-05,
                 label.padding = 0.3, color = "white") +
-  # paletteer::scale_fill_paletteer_d("palettetown::dratini", direction = -1) +
-  # paletteer::scale_fill_paletteer_d("ggthemes::Jewel_Bright") +
-  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
-  # paletteer::scale_color_paletteer_d("palettetown::dratini") +
-  coord_polar(theta = "y") +
-  guides(fill = "none", color = "none") +
   # semi-transparent ring
   annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
            fill = alpha("grey4", 0.25)) +
   # inner ring
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
            fill = "grey4") +
-  # geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
-  #           size = 8, family = "Fira Sans SemiBold", color = "white")
   geom_richtext(
     aes(x = 0, y = 0,
         label = sprintf(
@@ -169,16 +161,27 @@ p_donut <-
           format(date, "%B"), year(date))), 
                 stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
                 fill = NA, label.size = 0, lineheight = 1.67) +
+  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
+  coord_polar(theta = "y") +
+  guides(fill = "none", color = "none") +
+  labs(
+    title = "Mobile phone market 2010-2022",
+    subtitle = "Market share of mobile phone vendors"
+  ) + 
   theme_void(base_family = "Fira Sans") + 
   theme(
     plot.background = element_rect(color = NA, fill = "grey4"),
-    plot.margin = margin(10, 10, 10, 10)
+    plot.margin = margin(10, 10, 10, 10),
+    text = element_text(color = "grey80"),
+    plot.title = element_text(
+      family = "Fira Sans SemiBold", color = "white", size = 16),
+    plot.title.position = "plot"
   )
 
 p_anim <- p_donut +
   transition_states(date)
 
-anim <- animate(p_anim, res = 100, width = 600, height = 600, fps = 12,
+anim <- animate(p_anim, res = 100, width = 720, height = 640, fps = 12,
                 duration = 60)
 anim_save("animated-donut-chart.gif", anim)
 
