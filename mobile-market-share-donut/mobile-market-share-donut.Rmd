@@ -9,9 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## The original animation
+
+[Visual Capitalist](https://www.visualcapitalist.com/) published an animation created by James Eagle showing how smartphone vendor market shares developed over 30 years. In the center of the visualization is a donut chart displaying monthly market share values. The chart includes a legend, which repeats the share per manufacturer. Manufacturers displayed in the donut chart are highlighted in the legend.
+
+The goal of this tutorial is to **create the animated donut chart in R with {ggplot2}**. We will use another data source due to availability and (for now) not create the legend.
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Animation: How the Mobile Phone Market Has Evolved Over 30 Years 📲<br><br>Article: <a href="https://t.co/7JfDGv4EYe">https://t.co/7JfDGv4EYe</a><br><br>Courtesy of creator <a href="https://twitter.com/JamesEagle17?ref_src=twsrc%5Etfw">@JamesEagle17</a> <a href="https://t.co/4wrxHE3LSQ">pic.twitter.com/4wrxHE3LSQ</a></p>&mdash; Visual Capitalist (@VisualCap) <a href="https://twitter.com/VisualCap/status/1521917651454361601?ref_src=twsrc%5Etfw">May 4, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+```{=html}
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+```
+
 ## Packages
 
-```{r packages}
+Let's load the packages we will use for creating the animation, especially {ggplot2} via the Tidyverse and [{gganimate}](https://gganimate.com/index.html).
+
+```{r packages, message=FALSE}
 library(tidyverse)
 library(gganimate)
 library(ggtext)
@@ -20,18 +34,32 @@ library(lubridate)
 
 ## Get the data
 
-Statcounter provides mobile vendor market share back to 2010. The original video goes back to the 1990s. The data can be downloaded in CSV format via https://gs.statcounter.com/vendor-market-share/mobile/worldwide/#monthly-201003-202205
-After the download, place the CSV file in your project directory.
+[Statcounter](https://gs.statcounter.com/) provides mobile vendor market shares back to 2010. The original animation goes back to the 1990s and uses data which are not openly available.
+
+### A peak at methodology
+
+Statcounter gives an overview about how the data is collected in their [FAQ](https://gs.statcounter.com/faq#methodology) section:
+
+> Statcounter is a web analytics service. Our tracking code is installed on more than 2 million sites globally. These sites cover various activities and geographic locations. Every month, we record billions of page views to these sites. For each page view, we analyse the browser/operating system/screen resolution used and we establish if the page view is from a mobile device.
+
+Statcounter data is licensed under a [Creative Commons Attribution-Share Alike 3.0 Unported License](https://creativecommons.org/licenses/by-sa/3.0/). It can be downloaded in CSV format via https://gs.statcounter.com/vendor-market-share/mobile/worldwide/#monthly-201003-202205. After the download, place the CSV file in your project directory before loading it into the R session. We are using the maximum period available, which is March 2010 to May 2022 (as of writing this tutorial).
 
 ```{r read_data}
 filename <- "vendor-ww-monthly-201003-202205.csv"
 df_raw <- read_csv(filename)
+n_vendors <- ncol(df_raw) - 1
+head(df_raw)
+```
 
+Each vendor's market share is coded in a column. In total, the market shares from `r n_vendors` vendors are available in the dataframe.
+
+```{r}
+colnames(df_raw)
 ```
 
 ## Transform the data
 
-Transform the data to long format for our next steps.
+For our plot, we have to transform the dataframe into long format, i.e. each vendor has to be encoded in a row instead of a column. Since displaying all vendors would lead to a cluttered chart, we lump vendors with smaller market shares into an "Other" category. There are a couple of months with a rather high shares of "Unknown" - we group "Unknown" to other as well. All vendors with a market share below the threshold will be recoded as "Other" month by month.
 
 ```{r transform_data}
 threshold_for_lumping <- 3.1
@@ -42,6 +70,7 @@ df_long <- df_raw %>%
   mutate(vendor2 = ifelse(market_share < threshold_for_lumping | 
                             vendor == "Unknown", "Other", vendor),
          date = ym(Date)) %>% 
+  # the data from March 2010 is incomplete, remove it
   filter(date > as_date("2010-03-01")) %>% 
   count(date, vendor2, wt = market_share, name = "market_share")
 
@@ -53,15 +82,15 @@ The first few rows of the transformed dataframe:
 head(df_long)
 ```
 
-All grouped vendors:
+All vendors in the new grouped variable. These vendors will appear in the chart at least in one month with a market share above the threshold:
 
 ```{r}
 unique(df_long$vendor2)
 ```
 
-
-
 ## First plot with facets
+
+Let's create the first basic graph, capturing the market share for each month of the first year:
 
 ```{r first_plot}
 
@@ -76,24 +105,36 @@ df_long %>%
 
 ## Create a donut chart with ggplot2
 
-
-{ggpubr} is great for creating several chart types, include donut charts. However, for our animation we will build the plot from scratch in {ggplot2}.
-
+{ggpubr} is a great package for creating several chart types without all the details of {ggplot2}, including [donut charts](https://rpkgs.datanovia.com/ggpubr/reference/ggdonutchart.html). Since we will be making some customizations for our animation, we will create the plot from scratch in {ggplot2}, though.
 
 ### Start with a pie chart
 
+The base for the donut chart is a pie chart. Creating pie charts in {ggplot2} works just like creating a stacked bar chart in a polar coordinate system. We achieve this by adding `coord_polar(theta = "y")` to the plot. For this static chart we select the most recent month.
+
 ```{r first_pie}
+df_long %>% 
+  filter(date == as_date("2022-05-01")) %>%
+  ggplot(aes(x = 1, market_share, group = vendor2)) +
+  geom_col(aes(fill = vendor2), position = "fill") +
+  paletteer::scale_fill_paletteer_d("palettetown::dratini") +
+  coord_polar(theta = "y") +
+  theme_void() # removes all theme elements
+```
+
+Adding the labels for each category is a bit trickier. We have to calculate the label position from the cumulative sums.
+
+```{r pie_with_labels}
 p <- df_long %>% 
   filter(date == as_date("2022-05-01")) %>%
+  # calculate the label positions and format the label texts
   arrange(date, market_share) %>% 
   mutate(label_pos = cumsum(market_share) / sum(market_share) 
          - 0.5 * market_share /  sum(market_share),
-         label = sprintf("%s<br>%s %%", vendor2, market_share),
-         # label = fct_reorder(label, -market_share),
+         label = sprintf("%s\n%s %%", vendor2, market_share),
          vendor2 = fct_reorder(vendor2, -market_share)) %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
-  geom_richtext(aes(x = 1.5, label = label, y = label_pos)) +
+  geom_label(aes(x = 1.5, label = label, y = label_pos)) +
   paletteer::scale_fill_paletteer_d("palettetown::dratini") +
   coord_polar(theta = "y") +
   guides(fill = "none") +
@@ -102,11 +143,9 @@ p
 
 ```
 
-
 ### ... and the donut
 
-We just simply add a white circle on top of the pie chart. Voilà, a donut chart.
-Adjust `donut_hole_width` to increase or decrease the donut bar. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
+We just simply add a white circle (i.e. same color as the background) on top of the pie chart. Voilà, a **donut chart**. Adjust `donut_hole_width` to change the size of the inner ring. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
 
 ```{r}
 
@@ -123,7 +162,6 @@ p_donut
 
 ## First animation
 
-
 ```{r animation}
 
 p_donut <- 
@@ -139,7 +177,6 @@ p_donut <-
          label = sprintf("%s\n%s %%", vendor2, 
                          scales::number(market_share, accuracy = 0.1)),
          label = fct_reorder(label, market_share)
-         # vendor2 = fct_reorder(vendor2, -market_share)
          ) %>% 
   ungroup() %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
@@ -178,12 +215,12 @@ p_donut <-
     plot.title.position = "plot"
   )
 
-p_anim <- p_donut +
-  transition_states(date)
-
-anim <- animate(p_anim, res = 100, width = 720, height = 640, fps = 12,
-                duration = 60)
-anim_save("animated-donut-chart.gif", anim)
+# p_anim <- p_donut +
+#   transition_states(date)
+# 
+# anim <- animate(p_anim, res = 100, width = 720, height = 640, fps = 12,
+#                 duration = 60)
+# anim_save("animated-donut-chart.gif", anim)
 
 ```
 
