@@ -111,12 +111,14 @@ df_long %>%
 
 The base for the donut chart is a pie chart. Creating pie charts in {ggplot2} works just like creating a stacked bar chart in a polar coordinate system. We achieve this by adding `coord_polar(theta = "y")` to the plot. For this static chart we select the most recent month.
 
+Instead of the default color palette we use the Lapras palette from the {palettetown} package.
+
 ```{r first_pie}
 df_long %>% 
   filter(date == as_date("2022-05-01")) %>%
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
-  paletteer::scale_fill_paletteer_d("palettetown::dratini") +
+  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
   coord_polar(theta = "y") +
   theme_void() # removes all theme elements
 ```
@@ -134,8 +136,8 @@ p <- df_long %>%
          vendor2 = fct_reorder(vendor2, -market_share)) %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
-  geom_label(aes(x = 1.5, label = label, y = label_pos)) +
-  paletteer::scale_fill_paletteer_d("palettetown::dratini") +
+  geom_label(aes(x = 1.5, label = label, y = label_pos)) + 
+  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
   coord_polar(theta = "y") +
   guides(fill = "none") +
   theme_void()
@@ -147,17 +149,17 @@ p
 
 We just simply add a white circle (i.e. same color as the background) on top of the pie chart. Voilà, a **donut chart**. Adjust `donut_hole_width` to change the size of the inner ring. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
 
-```{r}
+Inside the inner ring we display the current month using `geom_text()`.
 
+```{r}
+# adjust the size of the inner ring
 donut_hole_width <- 0.75
 
-p_donut <- p + 
+p + 
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
            fill = "white") +
   geom_text(aes(x = 0, y = 0, label = format(date, "%B\n%Y")), stat = "unique",
             size = 8)
-p_donut
-
 ```
 
 ## First animation
@@ -166,18 +168,16 @@ p_donut
 
 p_donut <- 
   df_long %>% 
-  # filter(date == as_date("2022-05-01")) %>%
   mutate(vendor2 = factor(vendor2, levels = unique(df_long$vendor2))) %>% 
-  # arrange(date, vendor2) %>% 
   # now we need to calculate the label position within each month
   group_by(date) %>% 
   arrange(desc(vendor2), .by_group = TRUE) %>% 
-  mutate(label_pos = cumsum(market_share) / sum(market_share)  
-         - 0.5 * market_share / sum(market_share),
-         label = sprintf("%s\n%s %%", vendor2, 
-                         scales::number(market_share, accuracy = 0.1)),
-         label = fct_reorder(label, market_share)
-         ) %>% 
+  mutate(
+    label_pos = cumsum(market_share) / sum(market_share) 
+    - 0.5 * market_share / sum(market_share),
+    label = sprintf("%s\n%s %%", vendor2, 
+                    scales::number(market_share, accuracy = 0.1)),
+    label = fct_reorder(label, market_share)) %>% 
   ungroup() %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
@@ -192,9 +192,11 @@ p_donut <-
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
            fill = "grey4") +
   geom_richtext(
-    aes(x = 0, y = 0,
-        label = sprintf(
-          "<span style='color: grey80'>%s</span><br><span style='font-size: 40pt'>%s</span>", 
+    aes(
+      x = 0, y = 0,
+      label = sprintf(
+        "<span style='color: grey80'>%s</span><br>
+        <span style='font-size: 40pt'>%s</span>", 
           format(date, "%B"), year(date))), 
                 stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
                 fill = NA, label.size = 0, lineheight = 1.67) +
