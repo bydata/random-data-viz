@@ -191,10 +191,11 @@ custom_theme <- function() {
   theme(
     plot.background = element_rect(color = NA, fill = "grey4"),
     plot.margin = margin(10, 10, 10, 10),
-    text = element_text(color = "grey80"),
+    text = element_text(color = "grey86"),
     plot.title = element_text(
       family = "Fira Sans SemiBold", color = "white", size = 16),
-    plot.title.position = "plot" # aligns the title with the plot instead of the panel
+    plot.title.position = "plot", # aligns the title with the plot instead of the panel
+    plot.caption = element_markdown(size = 7)
   )
 }
 ```
@@ -202,9 +203,9 @@ custom_theme <- function() {
 Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the **semi-transparent effect** from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color. We replace `geom_label()` with `geom_text_repel()` from the [{ggrepel}](https://ggrepel.slowkow.com/index.html) package and force the segment lines to be shown anytime with `min.segment.length = 0`.
 
 ```{r formatted_donut} 
-df_long_with_labels %>% 
-  filter(date == as_date("2022-05-01")) %>%
-  ggplot(aes(x = 1, market_share, group = vendor2)) +
+donut_chart <- function(df) {
+  df %>% 
+    ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
   ggrepel::geom_text_repel(
     aes(x = 1.5, label = label, y = label_pos),
@@ -229,6 +230,12 @@ df_long_with_labels %>%
   coord_polar(theta = "y") +
   guides(fill = "none") +
   custom_theme()
+}
+
+df_long_with_labels %>% 
+  filter(date == as_date("2022-05-01")) %>%
+  donut_chart()
+  
 ```
 
 
@@ -237,46 +244,23 @@ df_long_with_labels %>%
 Finally, we animate the donut chart. 
 
 ```{r animation}
-
-p_donut <- df_long_with_labels %>% 
-  ggplot(aes(x = 1, market_share, group = vendor2)) +
-  geom_col(aes(fill = vendor2), position = "fill") +
-  ggrepel::geom_text_repel(
-    aes(x = 1.5, label = label, y = label_pos),
-    hjust = 0, family = "Fira Sans", segment.size = 0.3, min.segment.length = 0, 
-    nudge_x = 0.3, point.padding = 1e-05, color = "white") +
-  # semi-transparent ring
-  annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
-           fill = alpha("grey4", 0.25)) +
-  # inner ring
-  annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
-           fill = "grey4") +
-  geom_richtext(
-    aes(x = 0, y = 0, label = sprintf(
-        "<span style='color: grey80'>%s</span><br><span style='font-size: 40pt'>%s</span>", 
-          format(date, "%B"), year(date))), 
-                stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
-                fill = NA, label.size = 0, lineheight = 1.67) +
-  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
-  coord_polar(theta = "y") +
-  guides(fill = "none", color = "none") +
+p_donut <- donut_chart(df_long_with_labels)  +
   labs(
     title = "Mobile phone market 2010-2022",
     subtitle = "Market share of mobile phone vendors",
-    caption = "**Source:** Statcounter. **Visualization:** Ansgar Wolsing"
-  ) + 
-  custom_theme()
+    caption = "**Source:** Statcounter (License: CC BY-SA 3.0). **Visualization:** Ansgar Wolsing"
+  )
 
-# # Animate along each month
-# p_anim <- p_donut +
-#   transition_states(date)
-# 
-# # increase this to increase the resolution and adjust width and height at the same time
-# resolution_factor <- 1.5
-# anim <- animate(p_anim, res = resolution_factor * 100,
-#                 width = resolution_factor * 720, height = resolution_factor * 600,
-#                 fps = 12, duration = 60)
-# anim_save("animated-donut-chart.gif", anim)
+# Animate along each month
+p_anim <- p_donut +
+  transition_states(date)
+
+# increase this to increase the resolution and adjust width and height at the same time
+resolution_factor <- 1.5
+anim <- animate(p_anim, res = resolution_factor * 100,
+                width = resolution_factor * 720, height = resolution_factor * 600,
+                fps = 12, duration = 60, bg = "grey4")
+anim_save("animated-donut-chart.gif", anim)
 ```
 
 ![](animated-donut-chart.gif)
