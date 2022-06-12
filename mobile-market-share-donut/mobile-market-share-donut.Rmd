@@ -130,15 +130,30 @@ df_long %>%
 
 Adding the labels for each category is a bit trickier. We have to calculate the label position from the cumulative sums. We use the vendor name and the market share as data labels.
 
+(...)
+
+```{r transform_data_for_labels}
+
+df_long_with_labels <- df_long %>% 
+  mutate(vendor2 = factor(vendor2, levels = unique(df_long$vendor2))) %>% 
+  # calculate the label position within each month
+  group_by(date) %>% 
+  arrange(desc(vendor2), .by_group = TRUE) %>% 
+  mutate(
+    label_pos = cumsum(market_share) / sum(market_share) 
+    - 0.5 * market_share / sum(market_share),
+    label = sprintf("%s\n%s %%", vendor2, 
+                    scales::number(market_share, accuracy = 0.1)),
+    label = fct_reorder(label, market_share)) %>% 
+  ungroup() 
+
+```
+
+(...)
+
 ```{r pie_with_labels}
-p <- df_long %>% 
+p <- df_long_with_labels %>% 
   filter(date == as_date("2022-05-01")) %>%
-  # calculate the label positions and format the label texts
-  arrange(date, market_share) %>% 
-  mutate(label_pos = cumsum(market_share) / sum(market_share) 
-         - 0.5 * market_share /  sum(market_share),
-         label = sprintf("%s\n%s %%", vendor2, market_share),
-         vendor2 = fct_reorder(vendor2, -market_share)) %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
   geom_label(aes(x = 1.5, label = label, y = label_pos)) + 
@@ -147,7 +162,6 @@ p <- df_long %>%
   guides(fill = "none") +
   theme_void()
 p
-
 ```
 
 ### ... and the donut
@@ -169,10 +183,9 @@ p +
 
 ### Adjust the theme
 
-Next we adjust the appearance of the chart. We change the background to dark grey / black and set the font. Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the semi-transparent effect from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color.
+Next we adjust the appearance of the chart. We change the **background color** to dark grey / black and set the font. 
 
-```{r}
-
+```{r define_custom_theme}
 custom_theme <- function() {
   theme_void(base_family = "Fira Sans") + 
   theme(
@@ -184,8 +197,19 @@ custom_theme <- function() {
     plot.title.position = "plot" # aligns the title with the plot instead of the panel
   )
 }
+```
 
-p + 
+Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the **semi-transparent effect** from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color. We replace `geom_label()` with `geom_text_repel()` from the [{ggrepel}](https://ggrepel.slowkow.com/index.html) package and force the segment lines to be shown anytime with `min.segment.length = 0`.
+
+```{r formatted_donut} 
+df_long_with_labels %>% 
+  filter(date == as_date("2022-05-01")) %>%
+  ggplot(aes(x = 1, market_share, group = vendor2)) +
+  geom_col(aes(fill = vendor2), position = "fill") +
+  ggrepel::geom_text_repel(
+    aes(x = 1.5, label = label, y = label_pos),
+    hjust = 0, family = "Fira Sans", segment.size = 0.3, min.segment.length = 0, 
+    nudge_x = 0.3, point.padding = 1e-05, color = "white") + 
   # semi-transparent ring
   annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
            fill = alpha("grey4", 0.25)) +
@@ -201,8 +225,10 @@ p +
           format(date, "%B"), year(date))), 
                 stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
                 fill = NA, label.size = 0, lineheight = 1.67) + 
+  paletteer::scale_fill_paletteer_d("palettetown::lapras") +
+  coord_polar(theta = "y") +
+  guides(fill = "none") +
   custom_theme()
-
 ```
 
 
@@ -212,19 +238,7 @@ Finally, we animate the donut chart.
 
 ```{r animation}
 
-p_donut <- 
-  df_long %>% 
-  mutate(vendor2 = factor(vendor2, levels = unique(df_long$vendor2))) %>% 
-  # now we need to calculate the label position within each month
-  group_by(date) %>% 
-  arrange(desc(vendor2), .by_group = TRUE) %>% 
-  mutate(
-    label_pos = cumsum(market_share) / sum(market_share) 
-    - 0.5 * market_share / sum(market_share),
-    label = sprintf("%s\n%s %%", vendor2, 
-                    scales::number(market_share, accuracy = 0.1)),
-    label = fct_reorder(label, market_share)) %>% 
-  ungroup() %>% 
+p_donut <- df_long_with_labels %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
   ggrepel::geom_text_repel(
@@ -253,7 +267,7 @@ p_donut <-
   ) + 
   custom_theme()
 
-# Animate through each month
+# # Animate along each month
 # p_anim <- p_donut +
 #   transition_states(date)
 # 
