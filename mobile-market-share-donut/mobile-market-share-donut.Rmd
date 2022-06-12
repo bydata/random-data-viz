@@ -44,14 +44,19 @@ Statcounter gives an overview about how the data is collected in their [FAQ](htt
 
 Statcounter data is licensed under a [Creative Commons Attribution-Share Alike 3.0 Unported License](https://creativecommons.org/licenses/by-sa/3.0/). It can be downloaded in CSV format via https://gs.statcounter.com/vendor-market-share/mobile/worldwide/#monthly-201003-202205. After the download, place the CSV file in your project directory before loading it into the R session. We are using the maximum period available, which is March 2010 to May 2022 (as of writing this tutorial).
 
-```{r read_data}
+```{r read_data, message=FALSE}
 filename <- "vendor-ww-monthly-201003-202205.csv"
 df_raw <- read_csv(filename)
 n_vendors <- ncol(df_raw) - 1
-head(df_raw)
 ```
 
-Each vendor's market share is coded in a column. In total, the market shares from `r n_vendors` vendors are available in the dataframe.
+Here are the first 10 rows and the first 10 columns of the data frame:
+
+```{r}
+knitr::kable(df_raw[1:10, 1:10])
+```
+
+Each vendor's market share is coded in a column. In total, the market shares from `r n_vendors` vendors are available in the data frame. Some brand names resemble memories of "old" times.
 
 ```{r}
 colnames(df_raw)
@@ -59,7 +64,7 @@ colnames(df_raw)
 
 ## Transform the data
 
-For our plot, we have to transform the dataframe into long format, i.e. each vendor has to be encoded in a row instead of a column. Since displaying all vendors would lead to a cluttered chart, we lump vendors with smaller market shares into an "Other" category. There are a couple of months with a rather high shares of "Unknown" - we group "Unknown" to other as well. All vendors with a market share below the threshold will be recoded as "Other" month by month.
+For our plot, we have to transform the data frame into long format, i.e. each vendor will be encoded in a row instead of a column. Since displaying all vendors would lead to a cluttered chart, we lump vendors with smaller market shares into an "Other" category. There are a couple of months with a rather high shares of "Unknown" - we group "Unknown" into "Other" as well. All vendors with a market share below the threshold will be recoded as "Other" month by month. (The threshold is eventually chosen so that the number of colors in the selected color palette is not exceeded.)
 
 ```{r transform_data}
 threshold_for_lumping <- 3.1
@@ -67,22 +72,22 @@ threshold_for_lumping <- 3.1
 df_long <- df_raw %>%
   pivot_longer(cols = -Date, names_to = "vendor", values_to = "market_share") %>% 
   # group vendors with smaller market shares to "Other" based on monthly shares
-  mutate(vendor2 = ifelse(market_share < threshold_for_lumping | 
-                            vendor == "Unknown", "Other", vendor),
-         date = ym(Date)) %>% 
+  mutate(
+    vendor2 = ifelse(market_share < threshold_for_lumping | vendor == "Unknown", "Other", vendor),
+    date = ym(Date)) %>% 
   # the data from March 2010 is incomplete, remove it
   filter(date > as_date("2010-03-01")) %>% 
   count(date, vendor2, wt = market_share, name = "market_share")
 
 ```
 
-The first few rows of the transformed dataframe:
+The first few rows of the transformed data frame:
 
 ```{r}
 head(df_long)
 ```
 
-All vendors in the new grouped variable. These vendors will appear in the chart at least in one month with a market share above the threshold:
+Here are all vendors in the new grouped variable. These vendors will appear in the chart at least in one month:
 
 ```{r}
 unique(df_long$vendor2)
@@ -90,7 +95,7 @@ unique(df_long$vendor2)
 
 ## First plot with facets
 
-Let's create the first basic graph, capturing the market share for each month of the first year:
+Let's create the first basic graph, capturing the market share for each month of the first year in the data frame:
 
 ```{r first_plot}
 
@@ -105,7 +110,7 @@ df_long %>%
 
 ## Create a donut chart with ggplot2
 
-{ggpubr} is a great package for creating several chart types without all the details of {ggplot2}, including [donut charts](https://rpkgs.datanovia.com/ggpubr/reference/ggdonutchart.html). Since we will be making some customizations for our animation, we will create the plot from scratch in {ggplot2}, though.
+{ggpubr} is a great package which provides wrapper functions for creating several chart types without all the details of {ggplot2}, including [donut charts](https://rpkgs.datanovia.com/ggpubr/reference/ggdonutchart.html). Since we will be making some customizations for our animation, we will create the plot from scratch in {ggplot2}, though.
 
 ### Start with a pie chart
 
@@ -123,7 +128,7 @@ df_long %>%
   theme_void() # removes all theme elements
 ```
 
-Adding the labels for each category is a bit trickier. We have to calculate the label position from the cumulative sums.
+Adding the labels for each category is a bit trickier. We have to calculate the label position from the cumulative sums. We use the vendor name and the market share as data labels.
 
 ```{r pie_with_labels}
 p <- df_long %>% 
@@ -149,7 +154,7 @@ p
 
 We just simply add a white circle (i.e. same color as the background) on top of the pie chart. Voilà, a **donut chart**. Adjust `donut_hole_width` to change the size of the inner ring. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
 
-Inside the inner ring we display the current month using `geom_text()`.
+Inside the inner ring we display the month using `geom_text()`. For now this is a static value. We will later change the value based on the month displayed in the animated chart. 
 
 ```{r}
 # adjust the size of the inner ring
@@ -162,7 +167,48 @@ p +
             size = 8)
 ```
 
-## First animation
+### Adjust the theme
+
+Next we adjust the appearance of the chart. We change the background to dark grey / black and set the font. Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the semi-transparent effect from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color.
+
+```{r}
+
+custom_theme <- function() {
+  theme_void(base_family = "Fira Sans") + 
+  theme(
+    plot.background = element_rect(color = NA, fill = "grey4"),
+    plot.margin = margin(10, 10, 10, 10),
+    text = element_text(color = "grey80"),
+    plot.title = element_text(
+      family = "Fira Sans SemiBold", color = "white", size = 16),
+    plot.title.position = "plot" # aligns the title with the plot instead of the panel
+  )
+}
+
+p + 
+  # semi-transparent ring
+  annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
+           fill = alpha("grey4", 0.25)) +
+  # inner ring
+  annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
+           fill = "grey4") +
+  geom_richtext(
+    aes(
+      x = 0, y = 0,
+      label = sprintf(
+        "<span style='color: grey80'>%s</span><br>
+        <span style='font-size: 40pt'>%s</span>", 
+          format(date, "%B"), year(date))), 
+                stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
+                fill = NA, label.size = 0, lineheight = 1.67) + 
+  custom_theme()
+
+```
+
+
+## Animate the donut chart
+
+Finally, we animate the donut chart. 
 
 ```{r animation}
 
@@ -181,10 +227,10 @@ p_donut <-
   ungroup() %>% 
   ggplot(aes(x = 1, market_share, group = vendor2)) +
   geom_col(aes(fill = vendor2), position = "fill") +
-  ggrepel::geom_text_repel(aes(x = 1.5, label = label, y = label_pos),
-                hjust = 0, family = "Fira Sans", segment.size = 0.3,
-                min.segment.length = 0, nudge_x = 0.3, point.padding = 1e-05,
-                label.padding = 0.3, color = "white") +
+  ggrepel::geom_text_repel(
+    aes(x = 1.5, label = label, y = label_pos),
+    hjust = 0, family = "Fira Sans", segment.size = 0.3, min.segment.length = 0, 
+    nudge_x = 0.3, point.padding = 1e-05, color = "white") +
   # semi-transparent ring
   annotate("rect", xmin = 0, xmax = donut_hole_width + 0.15, ymin = -Inf, ymax = Inf,
            fill = alpha("grey4", 0.25)) +
@@ -192,11 +238,8 @@ p_donut <-
   annotate("rect", xmin = 0, xmax = donut_hole_width, ymin = -Inf, ymax = Inf,
            fill = "grey4") +
   geom_richtext(
-    aes(
-      x = 0, y = 0,
-      label = sprintf(
-        "<span style='color: grey80'>%s</span><br>
-        <span style='font-size: 40pt'>%s</span>", 
+    aes(x = 0, y = 0, label = sprintf(
+        "<span style='color: grey80'>%s</span><br><span style='font-size: 40pt'>%s</span>", 
           format(date, "%B"), year(date))), 
                 stat = "unique", size = 8, family = "Fira Sans SemiBold", color = "white",
                 fill = NA, label.size = 0, lineheight = 1.67) +
@@ -205,25 +248,22 @@ p_donut <-
   guides(fill = "none", color = "none") +
   labs(
     title = "Mobile phone market 2010-2022",
-    subtitle = "Market share of mobile phone vendors"
+    subtitle = "Market share of mobile phone vendors",
+    caption = "**Source:** Statcounter. **Visualization:** Ansgar Wolsing"
   ) + 
-  theme_void(base_family = "Fira Sans") + 
-  theme(
-    plot.background = element_rect(color = NA, fill = "grey4"),
-    plot.margin = margin(10, 10, 10, 10),
-    text = element_text(color = "grey80"),
-    plot.title = element_text(
-      family = "Fira Sans SemiBold", color = "white", size = 16),
-    plot.title.position = "plot"
-  )
+  custom_theme()
 
+# Animate through each month
 # p_anim <- p_donut +
 #   transition_states(date)
 # 
-# anim <- animate(p_anim, res = 100, width = 720, height = 640, fps = 12,
-#                 duration = 60)
+# # increase this to increase the resolution and adjust width and height at the same time
+# resolution_factor <- 1.5
+# anim <- animate(p_anim, res = resolution_factor * 100,
+#                 width = resolution_factor * 720, height = resolution_factor * 600,
+#                 fps = 12, duration = 60)
 # anim_save("animated-donut-chart.gif", anim)
-
 ```
 
 ![](animated-donut-chart.gif)
+
