@@ -1,8 +1,11 @@
 ---
-title: "Mobile Market Share Animated Donut"
+title: "Creating an Animated Mobile Market Donut Chart with ggplot2 and gganimate"
 author: "Ansgar Wolsing"
-date: "6/10/2022"
-output: html_document
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: yeti
+    highlight: haddock
 ---
 
 ```{r setup, include=FALSE}
@@ -13,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 [Visual Capitalist](https://www.visualcapitalist.com/) published an animation created by James Eagle showing how smartphone vendor market shares developed over 30 years. In the center of the visualization is a donut chart displaying monthly market share values. The chart includes a legend, which repeats the share per manufacturer. Manufacturers displayed in the donut chart are highlighted in the legend.
 
-The goal of this tutorial is to **create the animated donut chart in R with {ggplot2}**. We will use another data source due to availability and (for now) not create the legend.
+The goal of this tutorial is to **create the animated donut chart in R with ggplot2**. We will use another data source due to availability and (for now) not create the legend.
 
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Animation: How the Mobile Phone Market Has Evolved Over 30 Years 📲<br><br>Article: <a href="https://t.co/7JfDGv4EYe">https://t.co/7JfDGv4EYe</a><br><br>Courtesy of creator <a href="https://twitter.com/JamesEagle17?ref_src=twsrc%5Etfw">@JamesEagle17</a> <a href="https://t.co/4wrxHE3LSQ">pic.twitter.com/4wrxHE3LSQ</a></p>&mdash; Visual Capitalist (@VisualCap) <a href="https://twitter.com/VisualCap/status/1521917651454361601?ref_src=twsrc%5Etfw">May 4, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
@@ -23,7 +26,7 @@ The goal of this tutorial is to **create the animated donut chart in R with {ggp
 
 ## Packages
 
-Let's load the packages we will use for creating the animation, especially {ggplot2} via the Tidyverse and [{gganimate}](https://gganimate.com/index.html).
+Let's load the packages we will use for creating the animation, especially ggplot2 via the Tidyverse and [gganimate](https://gganimate.com/index.html).
 
 ```{r packages, message=FALSE}
 library(tidyverse)
@@ -36,13 +39,15 @@ library(lubridate)
 
 [Statcounter](https://gs.statcounter.com/) provides mobile vendor market shares back to 2010. The original animation goes back to the 1990s and uses data which are not openly available.
 
-### A peak at methodology
+### Methodology
 
 Statcounter gives an overview about how the data is collected in their [FAQ](https://gs.statcounter.com/faq#methodology) section:
 
 > Statcounter is a web analytics service. Our tracking code is installed on more than 2 million sites globally. These sites cover various activities and geographic locations. Every month, we record billions of page views to these sites. For each page view, we analyse the browser/operating system/screen resolution used and we establish if the page view is from a mobile device.
 
 Statcounter data is licensed under a [Creative Commons Attribution-Share Alike 3.0 Unported License](https://creativecommons.org/licenses/by-sa/3.0/). It can be downloaded in CSV format via https://gs.statcounter.com/vendor-market-share/mobile/worldwide/#monthly-201003-202205. After the download, place the CSV file in your project directory before loading it into the R session. We are using the maximum period available, which is March 2010 to May 2022 (as of writing this tutorial).
+
+### Load the data
 
 ```{r read_data, message=FALSE}
 filename <- "vendor-ww-monthly-201003-202205.csv"
@@ -110,13 +115,13 @@ df_long %>%
 
 ## Create a donut chart with ggplot2
 
-{ggpubr} is a great package which provides wrapper functions for creating several chart types without all the details of {ggplot2}, including [donut charts](https://rpkgs.datanovia.com/ggpubr/reference/ggdonutchart.html). Since we will be making some customizations for our animation, we will create the plot from scratch in {ggplot2}, though.
+[ggpubr](https://rpkgs.datanovia.com/ggpubr/) is a package which provides wrapper functions for creating several chart types without all the details of ggplot2, including [donut charts](https://rpkgs.datanovia.com/ggpubr/reference/ggdonutchart.html). Since we will be making some customizations for our animation, we will create the plot from scratch in ggplot2, though.
 
 ### Start with a pie chart
 
-The base for the donut chart is a pie chart. Creating pie charts in {ggplot2} works just like creating a stacked bar chart in a polar coordinate system. We achieve this by adding `coord_polar(theta = "y")` to the plot. For this static chart we select the most recent month.
+The base for the donut chart is a pie chart. Creating pie charts in ggplot2 works just like creating a stacked bar chart in a polar coordinate system. We achieve this by adding `coord_polar(theta = "y")` to the plot. For this static chart we select the most recent month.
 
-Instead of the default color palette we use the Lapras palette from the {palettetown} package.
+Instead of the default color palette we use the Lapras palette from the [palettetown](https://github.com/timcdlucas/palettetown) package.
 
 ```{r first_pie}
 df_long %>% 
@@ -128,9 +133,7 @@ df_long %>%
   theme_void() # removes all theme elements
 ```
 
-Adding the labels for each category is a bit trickier. We have to calculate the label position from the cumulative sums. We use the vendor name and the market share as data labels.
-
-(...)
+Adding the labels for each category is a bit trickier. We calculate the label position from the cumulative sums taking into account the order of the vendors within each month. We combine vendor name and the market share as data labels. This will be the data frame with use for all the following plots.
 
 ```{r transform_data_for_labels}
 
@@ -149,7 +152,7 @@ df_long_with_labels <- df_long %>%
 
 ```
 
-(...)
+To create the pie chart with data labels, we specify `geom_label()` with the newly computed label column.
 
 ```{r pie_with_labels}
 p <- df_long_with_labels %>% 
@@ -166,7 +169,7 @@ p
 
 ### ... and the donut
 
-We just simply add a white circle (i.e. same color as the background) on top of the pie chart. Voilà, a **donut chart**. Adjust `donut_hole_width` to change the size of the inner ring. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
+We just simply add a circle with same color as the background on top of the pie chart. Voilà, a **donut chart**. Adjust `donut_hole_width` to change the size of the inner ring. A value of 0 will result in a pie chart, a value of 1.5 or greater will cover the whole pie chart.
 
 Inside the inner ring we display the month using `geom_text()`. For now this is a static value. We will later change the value based on the month displayed in the animated chart. 
 
@@ -200,7 +203,7 @@ custom_theme <- function() {
 }
 ```
 
-Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the **semi-transparent effect** from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color. We replace `geom_label()` with `geom_text_repel()` from the [{ggrepel}](https://ggrepel.slowkow.com/index.html) package and force the segment lines to be shown anytime with `min.segment.length = 0`.
+Furthermore, we place another circle on top of the inner ring (yes, it's a `geom_rect` in the polar coordinate system) to achieve the **semi-transparent effect** from the original chart. We change the month label as well: the year is highlighted (white and a larger font size), while the month is shown in a smaller font and light grey color. We replace `geom_label()` with `geom_text_repel()` from the [ggrepel](https://ggrepel.slowkow.com/index.html) package and force the segment lines to be shown anytime with `min.segment.length = 0`.
 
 ```{r formatted_donut} 
 donut_chart <- function(df) {
@@ -241,7 +244,7 @@ df_long_with_labels %>%
 
 ## Animate the donut chart
 
-Finally, we animate the donut chart. 
+Now we animate the donut chart. We use the function we defined before and apply it to the full dataset. The transitions along the `date` column are created with `transition_states()`, which tweens between the months. `animate()`then renders the gganim object `p_anim` into an animation. We are using [gifski](https://ropensci.org/blog/2018/07/23/gifski-release/) to create a GIF. The resolution and dimensions as well as the frame rate and duration of the GIF can be set. We set the parameter `bg` (background color) to the same color as the plot. Finally, we save the animation to a file.
 
 ```{r animation}
 p_donut <- donut_chart(df_long_with_labels)  +
@@ -251,17 +254,24 @@ p_donut <- donut_chart(df_long_with_labels)  +
     caption = "**Source:** Statcounter (License: CC BY-SA 3.0). **Visualization:** Ansgar Wolsing"
   )
 
-# Animate along each month
-p_anim <- p_donut +
-  transition_states(date)
-
-# increase this to increase the resolution and adjust width and height at the same time
-resolution_factor <- 1.5
-anim <- animate(p_anim, res = resolution_factor * 100,
-                width = resolution_factor * 720, height = resolution_factor * 600,
-                fps = 12, duration = 60, bg = "grey4")
-anim_save("animated-donut-chart.gif", anim)
+# # Animate along each month
+# p_anim <- p_donut +
+#   transition_states(date)
+# 
+# # increase this to increase the resolution and adjust width and height at the same time
+# resolution_factor <- 1.5
+# anim <- animate(p_anim, res = resolution_factor * 100,
+#                 width = resolution_factor * 600, height = resolution_factor * 600,
+#                 fps = 12, duration = 60, bg = "grey4")
+# anim_save("animated-donut-chart.gif", anim)
 ```
 
 ![](animated-donut-chart.gif)
+
+
+## Takeaways - and what's left
+
+
+
+
 
