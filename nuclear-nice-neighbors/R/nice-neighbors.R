@@ -236,7 +236,7 @@ ggplot() +
            label = "What you do to me...",
            x = 20, y = 48, 
            hjust = 0, 
-           angle = 4, size = 6, family = "Oswald", color = "grey22",
+           angle = 4, size = 7, family = "Oswald", color = "grey22",
            bg.colour = "white") +
   
   # Country labels
