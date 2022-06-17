@@ -48,6 +48,26 @@ df_change <- df %>%
   arrange(pop_change_rel_2017_2021) 
 
 
+# Custom theme
+theme_set(
+  theme_minimal(base_family = "Roboto Condensed Light") +
+  theme(
+    plot.background = element_rect(color = NA, fill = "white"),
+    panel.grid = element_blank(),
+    panel.grid.major.y = element_line(color = "grey80", size = 0.2),
+    panel.grid.minor.y = element_line(color = "grey80", size = 0.1),
+    plot.title = element_text(family = "Roboto Condensed", face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_textbox_simple(
+      hjust = 0, width = 0.9, margin = margin(t = 2, b = 8)),
+    plot.caption = element_markdown(),
+    axis.text.x = element_blank()
+  )
+)
+
+
+## 2017 to 2021 ================================================================
+
 ragg::agg_png(here(base_path, "population-change-de-2017-2021.png"), units = "in",
               width = 8, height = 6, res = 400)
 df_change %>% 
@@ -84,18 +104,47 @@ df_change %>%
   ) +
   scale_y_continuous(labels = scales::percent_format()) +
   scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
-                    aesthetics = c("fill", "color")) +
-  theme_minimal(base_family = "Roboto Condensed Light") +
-  theme(
-    plot.background = element_rect(color = NA, fill = "white"),
-    panel.grid = element_blank(),
-    panel.grid.major.y = element_line(color = "grey80", size = 0.2),
-    panel.grid.minor.y = element_line(color = "grey80", size = 0.1),
-    plot.title = element_text(family = "Roboto Condensed", face = "bold"),
-    plot.title.position = "plot",
-    plot.subtitle = element_textbox_simple(hjust = 0, width = 0.9),
-    plot.caption = element_markdown(),
-    axis.text.x = element_blank()
-  )
+                    aesthetics = c("fill", "color"))
 invisible(dev.off())
 
+
+
+## 2020 to 2021 ================================================================
+
+
+ragg::agg_png(here(base_path, "population-change-de-2020-2021.png"), units = "in",
+              width = 8, height = 6, res = 400)
+df_change %>% 
+  filter(geo != "DE") %>% 
+  arrange(-pop_change_rel_2020_2021) %>% 
+  # calculate the cumulative sum of inhabitants
+  mutate(cumsum_pop_2017 = cumsum(`2017`),
+         cumsum_pop_2017_lag = lag(cumsum_pop_2017, default = 0)) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = cumsum_pop_2017_lag, xmax = cumsum_pop_2017, 
+                ymin = 0, ymax = pop_change_rel_2020_2021,
+                fill = pop_change_rel_2020_2021 >= 0),
+            col = "white", size = 0.2) +
+  geom_label(
+    aes(x = cumsum_pop_2017_lag + `2017` / 2, 
+        y = pop_change_rel_2020_2021 + ifelse(pop_change_rel_2020_2021 > 0, 0.00025, -0.00025),
+        label = abbr, col = pop_change_rel_2020_2021 >= 0),
+    size = 2.5, family = "Roboto Condensed", fill = alpha("white", 0.6), 
+    label.size = 0, label.r = unit(0, "mm"), label.padding = unit(0, "mm")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
+                    aesthetics = c("fill", "color")) +
+  # coord_cartesian(ylim = c(-0.01, 0.01)) +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Population Change in German Federal States 2020-2021",
+    subtitle = "Total population (widths) multiplied by population change (heights) gives
+    growth in absolute numbers (surface area of the rectangles). 
+    The width of each rectangle is proportional to the population of
+    the federal states in 2020.",
+    caption = "Source: Eurostat. Visualization: Ansgar Wolsing",
+    x = NULL,
+    y = "Population Change 2020-2021 (%)"
+  )
+invisible(dev.off())
