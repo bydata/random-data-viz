@@ -85,7 +85,7 @@ theme <- theme_minimal(base_family = "Roboto") +
     axis.title = element_blank(),
     plot.title.position = "plot",
     text = element_text(color = "grey38"),
-    plot.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", color = "grey2"),
     plot.caption = element_markdown(
       hjust = 0, size = 7, margin = margin(t = 8)
     )
