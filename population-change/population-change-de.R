@@ -88,8 +88,13 @@ df_change %>%
     size = 2.5, family = "Roboto Condensed", fill = alpha("white", 0.6), 
     label.size = 0, label.r = unit(0, "mm"), label.padding = unit(0, "mm")) +
   annotate(GeomTextBox,
-           x = 50e6, y = -0.01, label = "3 of 4 states losing inhabitants are ",
-           family = "Roboto Condensed", box.size = 0, fill = alpha("white", 0.5)) +
+           x = 60e6, y = -0.01, 
+           label = "3 of those 4 states losing inhabitants are located on the 
+           territory of the former GDR", size = 3.5,
+           family = "Roboto Condensed Light", box.size = 0, fill = alpha("white", 0.5)) +
+  annotate(GeomCurve,
+           x = 67.5e6, xend = 75e6, y = -0.011, yend = -0.01, curvature = 0.3,
+           size = 0.2, arrow = arrow(length = unit(2, "mm"))) +
   guides(fill = "none",
          color = "none") +
   labs(
@@ -148,3 +153,83 @@ df_change %>%
     y = "Population Change 2020-2021 (%)"
   )
 invisible(dev.off())
+
+
+
+
+## 2017 to 2021 ANIMATED =======================================================
+
+library(gganimate)
+
+change_proportional_x <- df_change %>% 
+  filter(geo != "DE") %>% 
+  arrange(-pop_change_rel_2017_2021) %>% 
+  # calculate the cumulative sum of inhabitants
+  mutate(cumsum_pop_2017 = cumsum(`2017`),
+         cumsum_pop_2017_lag = lag(cumsum_pop_2017, default = 0),
+         x_label_pos = cumsum_pop_2017_lag + `2017` / 2) %>% 
+  select(geo, abbr, `2017`, pop_change_rel_2017_2021, cumsum_pop_2017, 
+         cumsum_pop_2017_lag, x_label_pos)
+
+
+# create xmin and xmax locations for equally sized and spaced bars
+inhabitants_de_2017 <- sum(df_change$`2017`)
+# seq(0, inhabitants_de_2017, inhabitants_de_2017 / 15)
+seq(0, inhabitants_de_2017 - inhabitants_de_2017 / 16, inhabitants_de_2017 / 16)
+
+# change_constant_x <- df_change %>% 
+#   filter(geo != "DE") %>% 
+#   arrange(-pop_change_rel_2017_2021) %>% 
+#   select(geo, `2017`, pop_change_rel_2017_2021)
+# change_constant_x$x <- seq(inhabitants_de_2017 / 16, 
+#                            inhabitants_de_2017 - inhabitants_de_2017 / 16, 
+#                            inhabitants_de_2017 / (16 + 2))
+# change_constant_x$cumsum_pop_2017 <- change_constant_x$x + 2e6
+# change_constant_x$cumsum_pop_2017_lag <- change_constant_x$x - 2e6
+# change_constant_x$x <- NULL
+
+change_constant_x <- df_change %>% 
+  filter(geo != "DE") %>% 
+  arrange(-pop_change_rel_2017_2021) %>% 
+  select(geo, abbr, `2017`, pop_change_rel_2017_2021) %>% 
+  bind_cols(x = seq(inhabitants_de_2017 / 16, 
+                    inhabitants_de_2017 - inhabitants_de_2017 / 16, 
+                    inhabitants_de_2017 / (16 + 2))) %>% 
+  mutate(cumsum_pop_2017 = x + 2e6,
+         cumsum_pop_2017_lag = x - 2e6) %>% 
+  rename(x_label_pos = x) %>% 
+  select(-x_label_pos, everything(), x_label_pos)
+
+
+
+p <- bind_rows(change_constant_x, change_proportional_x, .id = "state") %>% 
+  ggplot() +
+  geom_rect(aes(xmin = cumsum_pop_2017_lag, xmax = cumsum_pop_2017, 
+                ymin = 0, ymax = pop_change_rel_2017_2021,
+                fill = pop_change_rel_2017_2021 >= 0),
+            col = "white", size = 0.2) +
+  geom_label(
+    aes(x = x_label_pos, 
+        y = pop_change_rel_2017_2021 + ifelse(pop_change_rel_2017_2021 > 0, 0.001, -0.001),
+        label = abbr, col = pop_change_rel_2017_2021 >= 0),
+    size = 2.5, family = "Roboto Condensed", fill = alpha("white", 0.6), 
+    label.size = 0, label.r = unit(0, "mm"), label.padding = unit(0, "mm")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
+                    aesthetics = c("fill", "color")) +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Population Change in German Federal States 2017-2021",
+    subtitle = "The first frame is a simple bar chart showing the population change. 
+    In the second frame, the width of each rectangle is proportional to the population of
+    the federal states in 2017.",
+    caption = "Source: Eurostat. Visualization: Ansgar Wolsing",
+    x = NULL,
+    y = "Population Change 2017-2021 (%)"
+  )
+
+p_anim <- p + transition_states(state)
+anim <- animate(p_anim, res = 200, width = 8, height = 6, units = "in")
+anim_save(here(base_path, "population-change-de-2017-2021.gif"))
+
