@@ -174,19 +174,6 @@ change_proportional_x <- df_change %>%
 
 # create xmin and xmax locations for equally sized and spaced bars
 inhabitants_de_2017 <- sum(df_change$`2017`)
-# seq(0, inhabitants_de_2017, inhabitants_de_2017 / 15)
-seq(0, inhabitants_de_2017 - inhabitants_de_2017 / 16, inhabitants_de_2017 / 16)
-
-# change_constant_x <- df_change %>% 
-#   filter(geo != "DE") %>% 
-#   arrange(-pop_change_rel_2017_2021) %>% 
-#   select(geo, `2017`, pop_change_rel_2017_2021)
-# change_constant_x$x <- seq(inhabitants_de_2017 / 16, 
-#                            inhabitants_de_2017 - inhabitants_de_2017 / 16, 
-#                            inhabitants_de_2017 / (16 + 2))
-# change_constant_x$cumsum_pop_2017 <- change_constant_x$x + 2e6
-# change_constant_x$cumsum_pop_2017_lag <- change_constant_x$x - 2e6
-# change_constant_x$x <- NULL
 
 change_constant_x <- df_change %>% 
   filter(geo != "DE") %>% 
@@ -199,7 +186,6 @@ change_constant_x <- df_change %>%
          cumsum_pop_2017_lag = x - 2e6) %>% 
   rename(x_label_pos = x) %>% 
   select(-x_label_pos, everything(), x_label_pos)
-
 
 
 p <- bind_rows(change_constant_x, change_proportional_x, .id = "state") %>% 
