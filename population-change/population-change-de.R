@@ -60,7 +60,7 @@ theme_set(
     plot.title.position = "plot",
     plot.subtitle = element_textbox_simple(
       hjust = 0, width = 0.9, margin = margin(t = 2, b = 8)),
-    plot.caption = element_markdown(),
+    plot.caption = element_markdown(hjust = 0),
     axis.text.x = element_blank()
   )
 )
@@ -70,12 +70,15 @@ theme_set(
 
 ragg::agg_png(here(base_path, "population-change-de-2017-2021.png"), units = "in",
               width = 8, height = 6, res = 400)
-df_change %>% 
+
+df_plot_2017_2020 <- df_change %>% 
   filter(geo != "DE") %>% 
   arrange(-pop_change_rel_2017_2021) %>% 
   # calculate the cumulative sum of inhabitants
   mutate(cumsum_pop_2017 = cumsum(`2017`),
-         cumsum_pop_2017_lag = lag(cumsum_pop_2017, default = 0)) %>% 
+         cumsum_pop_2017_lag = lag(cumsum_pop_2017, default = 0)) 
+
+p <- df_plot_2017_2020 %>% 
   ggplot() +
   geom_rect(aes(xmin = cumsum_pop_2017_lag, xmax = cumsum_pop_2017, 
                 ymin = 0, ymax = pop_change_rel_2017_2021,
@@ -110,12 +113,177 @@ df_change %>%
   scale_y_continuous(labels = scales::percent_format()) +
   scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
                     aesthetics = c("fill", "color"))
+p
+
+## Add an example on how to read the x axis following wahlatlas' suggestion:
+#' https://twitter.com/wahlatlas/status/1538803195941638146
+
+# Bavaria coordinates on x axis
+xmin_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017_lag
+xmax_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017
+
+# add the annotation as text and segment
+p + 
+  annotate("segment",
+           x = c(xmin_bavaria, xmin_bavaria, xmax_bavaria), 
+           xend = c(xmax_bavaria, xmin_bavaria, xmax_bavaria), 
+           y = c(-0.002, -0.0015, -0.0015), 
+           yend = c(-0.002, -0.0025, -0.0025),
+           size = 0.3) +
+  annotate("text",
+           x = (xmin_bavaria + xmax_bavaria) / 2,
+           y = -0.004, 
+           label = sprintf(
+             "%s million inhabitants", round(df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", "2017"] / 1e6, 1)),
+           hjust = 0.5, family = "Roboto Condensed Light", size = 3)
+
+invisible(dev.off())
+
+
+## With full state names vertically
+## Add an example on how to read the x axis following wahlatlas' suggestion:
+#' https://twitter.com/wahlatlas/status/1538803195941638146
+
+# Bavaria coordinates on x axis
+xmin_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017_lag
+xmax_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017
+
+ragg::agg_png(here(base_path, "population-change-de-2017-2021.png"), units = "in",
+              width = 8, height = 6, res = 400)
+df_plot_2017_2020 %>% 
+  mutate(name = str_replace(name, "-", "-<br>")) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = cumsum_pop_2017_lag, xmax = cumsum_pop_2017, 
+                ymin = 0, ymax = pop_change_rel_2017_2021,
+                fill = pop_change_rel_2017_2021 >= 0),
+            col = "white", size = 0.35) +
+  geom_richtext(
+    aes(x = cumsum_pop_2017_lag + `2017` / 2, 
+        y = pop_change_rel_2017_2021 + ifelse(pop_change_rel_2017_2021 > 0, 0.0005, -0.0005),
+        label = name, col = pop_change_rel_2017_2021 >= 0,
+        hjust = ifelse(pop_change_rel_2017_2021 >= 0, 0, 1)),
+    size = 2.5, family = "Roboto Condensed", fill = alpha("white", 0.6), 
+    label.size = 0, label.r = unit(0, "mm"), label.padding = unit(0, "mm"),
+    lineheight = 0.95, angle = 90) +
+   # add the annotation as text and segment
+  annotate("segment",
+           x = c(xmin_bavaria, xmin_bavaria, xmax_bavaria), 
+           xend = c(xmax_bavaria, xmin_bavaria, xmax_bavaria), 
+           y = c(-0.002, -0.0015, -0.0015), 
+           yend = c(-0.002, -0.0025, -0.0025),
+           size = 0.3) +
+  annotate("text",
+           x = (xmin_bavaria + xmax_bavaria) / 2,
+           y = -0.004, 
+           label = sprintf(
+             "%s million inhabitants", round(df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", "2017"] / 1e6, 1)),
+           hjust = 0.5, family = "Roboto Condensed Light", size = 3) +
+  annotate("text",
+           x = 83e6, y = 0.001,
+           label = "83\nmillion",
+           family = "Roboto Condensed Light", size = 2.5, lineheight = 0.9,
+           vjust = 0
+           ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
+                    aesthetics = c("fill", "color")) +
+  coord_cartesian(clip = "off") +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Population Change in German Federal States 2017-2021",
+    subtitle = "Total population (widths) multiplied by population change (heights) gives
+    growth in absolute numbers (surface area of the rectangles). 
+    The width of each rectangle is proportional to the population of
+    the federal states in 2017.",
+    caption = "Source: Eurostat. Visualization: Ansgar Wolsing",
+    x = NULL,
+    y = "Population Change 2017-2021 (%)"
+  )
 invisible(dev.off())
 
 
 
-## 2020 to 2021 ================================================================
+## With as many state names as possible, the rest abbreviated + legend (via Cedric Scherer)
+## Add an example on how to read the x axis following wahlatlas' suggestion:
+#' https://twitter.com/wahlatlas/status/1538803195941638146
 
+# Bavaria coordinates on x axis
+xmin_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017_lag
+xmax_bavaria <- df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", ]$cumsum_pop_2017
+# states to abbreviate
+states_use_abbr <- c("BE", "HH", "BR", "SH", "RP", "HB", "MV",
+  "SL", "TH")
+
+ragg::agg_png(here(base_path, "population-change-de-2017-2021.png"), units = "in",
+              width = 8, height = 6, res = 400)
+df_plot_2017_2020 %>% 
+  mutate(name = str_replace(name, "-", "-<br>"),
+         label = ifelse(abbr %in% states_use_abbr, abbr, name)
+         ) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = cumsum_pop_2017_lag, xmax = cumsum_pop_2017, 
+                ymin = 0, ymax = pop_change_rel_2017_2021,
+                fill = pop_change_rel_2017_2021 >= 0),
+            col = "white", size = 0.35) +
+  geom_richtext(
+    aes(x = cumsum_pop_2017_lag + `2017` / 2, 
+        y = pop_change_rel_2017_2021 + ifelse(pop_change_rel_2017_2021 > 0, 0.0005, -0.0005),
+        label = label, col = pop_change_rel_2017_2021 >= 0,
+        vjust = ifelse(pop_change_rel_2017_2021 > 0, 0, 1)),
+    size = 2.5, family = "Roboto Condensed", fill = alpha("white", 0.6), 
+    label.size = 0, label.r = unit(0, "mm"), label.padding = unit(0, "mm"),
+    lineheight = 0.95) +
+  # add the annotation as text and segment
+  annotate("segment",
+           x = c(xmin_bavaria, xmin_bavaria, xmax_bavaria), 
+           xend = c(xmax_bavaria, xmin_bavaria, xmax_bavaria), 
+           y = c(-0.002, -0.0015, -0.0015), 
+           yend = c(-0.002, -0.0025, -0.0025),
+           size = 0.3) +
+  annotate("text",
+           x = (xmin_bavaria + xmax_bavaria) / 2,
+           y = -0.004, 
+           label = sprintf(
+             "%s million inhabitants", round(df_plot_2017_2020[df_plot_2017_2020$abbr == "BY", "2017"] / 1e6, 1)),
+           hjust = 0.5, family = "Roboto Condensed Light", size = 3) +
+  annotate("text",
+           x = 83e6, y = 0.001,
+           label = "83\nmillion",
+           family = "Roboto Condensed Light", size = 2.5, lineheight = 0.9,
+           vjust = 0
+  ) +
+  # custom legend of state abbreviations
+  annotate("richtext",
+           x = 5e6, y = -0.007, 
+           label = "**Abbreviated states**<br>
+           **BE** Berlin<br>**HH** Hamburg<br>**BR** Brandenburg<br>
+           **SH** Schleswig-Holstein<br>**RP** Rheinland-Pfalz<br>
+           **HB** Bremen<br>**MV** Mecklenburg-Vorpommern<br>
+           **SL** Saarland<br>**TH** Thüringen
+           ",
+           family = "Roboto Condensed", size = 2.5, hjust = 0, vjust = 1,
+           label.r = unit(0, "mm"), label.size = 0.1, col = "grey24") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
+                    aesthetics = c("fill", "color")) +
+  coord_cartesian(clip = "off") +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Population Change in German Federal States 2017-2021",
+    subtitle = "Total population (widths) multiplied by population change (heights) gives
+    growth in absolute numbers (surface area of the rectangles). 
+    The width of each rectangle is proportional to the population of
+    the federal states in 2017.",
+    caption = "Source: Eurostat. Visualization: Ansgar Wolsing",
+    x = NULL,
+    y = "Population Change 2017-2021 (%)"
+  )
+invisible(dev.off())
+
+
+## 2020 to 2021 ================================================================
 
 ragg::agg_png(here(base_path, "population-change-de-2020-2021.png"), units = "in",
               width = 8, height = 6, res = 400)
