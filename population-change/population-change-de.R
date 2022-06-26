@@ -264,7 +264,7 @@ df_plot_2017_2020 %>%
            family = "Roboto Condensed", size = 2.5, hjust = 0, vjust = 1,
            label.r = unit(0, "mm"), label.size = 0.1, col = "grey24") +
   scale_y_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = MetBrewer::met.brewer("Juarez", direction = -1), 
+  scale_fill_manual(values = MetBrewer::met.brewer("Egypt", direction = 1), 
                     aesthetics = c("fill", "color")) +
   coord_cartesian(clip = "off") +
   guides(fill = "none",
