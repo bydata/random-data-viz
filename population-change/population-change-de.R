@@ -256,8 +256,7 @@ df_plot_2017_2020 %>%
   # custom legend of state abbreviations
   annotate("richtext",
            x = 5e6, y = -0.007, 
-           label = "**Abbreviated states**<br>
-           **BE** Berlin<br>**HH** Hamburg<br>**BR** Brandenburg<br>
+           label = "**BE** Berlin<br>**HH** Hamburg<br>**BR** Brandenburg<br>
            **SH** Schleswig-Holstein<br>**RP** Rheinland-Pfalz<br>
            **HB** Bremen<br>**MV** Mecklenburg-Vorpommern<br>
            **SL** Saarland<br>**TH** Thüringen
