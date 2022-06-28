@@ -24,7 +24,7 @@ codes <- tribble(
   "DE1",	"BW", "Baden-Württemberg",
   "DE2",	"BY", "Bayern",
   "DE3",	"BE", "Berlin",
-  "DE4",	"BR", "Brandenburg",
+  "DE4",	"BB", "Brandenburg",
   "DE5",	"HB", "Bremen",
   "DE6",	"HH", "Hamburg",
   "DE7",	"HE", "Hessen",
@@ -256,9 +256,9 @@ df_plot_2017_2020 %>%
   # custom legend of state abbreviations
   annotate("richtext",
            x = 5e6, y = -0.007, 
-           label = "**BE** Berlin<br>**HH** Hamburg<br>**BR** Brandenburg<br>
-           **SH** Schleswig-Holstein<br>**RP** Rheinland-Pfalz<br>
-           **HB** Bremen<br>**MV** Mecklenburg-Vorpommern<br>
+           label = "**BB** Brandenburg<br>**BE** Berlin<br>**HB** Bremen<br>
+           **HH** Hamburg<br>**MV** Mecklenburg-Vorpommern<br>
+           **RP** Rheinland-Pfalz<br>**SH** Schleswig-Holstein<br>
            **SL** Saarland<br>**TH** Thüringen
            ",
            family = "Roboto Condensed", size = 2.5, hjust = 0, vjust = 1,
