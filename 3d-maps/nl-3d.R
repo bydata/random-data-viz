@@ -23,13 +23,11 @@ elev <- elevatr::get_elev_raster(nl, z = 7)
 elev_nl <- raster::mask(elev, nl)
 mat <- raster_to_matrix(elev_nl)
 
-
+# Custom texture
 # custom_texture <- create_texture(
-#   "springgreen","darkgreen", "turquoise","steelblue3", "white")
+#   "#294382", "white", "#9B2B2D", "white", "white")
 custom_texture <- create_texture(
-  "#3498eb","#0a2c47", "#2aaebf","#59a5e3", "white")
-custom_texture <- create_texture(
-  "#294382", "white", "#9B2B2D", "white", "white")
+  "#F78385", "white", "#9B2B2D", "white", "#294382")
 custom_texture %>%
   plot_map()
 
@@ -38,15 +36,10 @@ custom_texture %>%
 #' red: #9B2B2D
 
 
-mat %>% 
-  # sphere_shade(texture = "imhof2") %>% 
-  # sphere_shade(texture = custom_texture) %>% 
-  # plot_3d(mat, windowsize = c(1200, 1200), zoom = 0.6, phi = 25.75, theta = 70,
-  #         zscale = 30, background = "white",
-  #         solid = TRUE, solidcolor = "grey76")
+mat %>%
   sphere_shade(texture = custom_texture, colorintensity = 0.5) %>% 
   plot_3d(mat, windowsize = c(1200, 1200), zoom = 0.6, 
-          phi = 65.5, theta = -7.5, zscale = 15, background = "white",
+          phi = 57.9, theta = -6.8, zscale = 15, background = "white",
           solid = TRUE, solidcolor = "grey60", soliddepth = "auto", 
           solidlinecolor = "grey44")
 
