@@ -48,24 +48,11 @@ glimpse(episodes_st)
 dbDisconnect(con)
 
 
-# Color scheme for Stranger Things
-colors <- c(
-  "yellow" = "#FFE669",
-  "orange" = "#D18B0F",
-  "darkgrey" = "#080A0D",
-  "greybrown" = "#6F6F5E",
-  "lightgrey" = "#BAC2C2"
-)
-
-# Custom ggplot theme
-# ...
-
-
 # Inspiration: https://twitter.com/CedScherer/status/1242229041488433152
 
 annotate_richtext <- function(label, ...) {
   annotate("richtext", label = label,
-           family = "Lato Light", size = 2.75,
+           family = "Montserrat", size = 2.75,
            fill = NA, label.color = NA, color = "grey94", label.padding = unit(0.05, "mm"),
            hjust = 0,
            ...)
@@ -149,16 +136,18 @@ episodes_st_cont %>%
        <span style='font-size:24pt; color: #84251D'>{seasonNumber}</span>"
       )
     ),
-    stat = "unique", hjust = 0.5, family = "Benguiat", fill = NA, label.size = 0
+    stat = "unique", hjust = 0.5, vjust = 0.5, family = "Benguiat", fill = NA, 
+    label.size = 0
   ) + 
   # Annotations
-  annotate_richtext(label = "S2 E7 (\"The Lost Sister\")<br>is odd with a rating of 6.1",
-           x = 10, y = 6) +
-  # Custom title
+  annotate_richtext(
+    label = "S2 E7 (\"The Lost Sister\")<br>is odd with a rating of 6.1",
+    x = 9.5, y = 6) +
+  # Custom title with shadowtext
   shadowtext::geom_shadowtext(
     data = NULL,
     aes(x = nrow(episodes_st_cont) / 2, y = title_pos, label = titles$title), 
-    family = "Benguiat", color = bg_color, bg.color = "#B1281E", size = 10,
+    family = "Benguiat", color = bg_color, bg.color = "#B1281E", size = 9,
     hjust = 0.5, vjust = 0.7, inherit.aes = FALSE, lineheight = 0.8) +
   # Custom subtitle
   annotate(GeomTextBox, x = nrow(episodes_st_cont) / 2, y = title_pos - 0.75, 
@@ -187,4 +176,3 @@ invisible(dev.off())
 
 #' S2 E7: 
 #' https://www.digitalspy.com/tv/ustv/a841946/stranger-things-season-2-episode-7-the-lost-sister-what-went-wrong/
-
