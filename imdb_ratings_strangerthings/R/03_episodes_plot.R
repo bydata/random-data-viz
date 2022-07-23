@@ -65,14 +65,14 @@ colors <- c(
 
 annotate_richtext <- function(label, ...) {
   annotate("richtext", label = label,
-           family = "Lato Light", size = 1.75,
-           fill = NA, label.color = NA, color = "grey89", label.padding = unit(0.05, "mm"),
+           family = "Lato Light", size = 2.75,
+           fill = NA, label.color = NA, color = "grey94", label.padding = unit(0.05, "mm"),
            hjust = 0,
            ...)
 }
 
-geom_curve2 <- function(..., curvature = 0.2) {
-  geom_curve(curvature = curvature, size = 0.03, color = "grey80",
+geom_curve2 <- function(..., curvature = 0.1) {
+  geom_curve(curvature = curvature, size = 0.1, color = "grey80",
              arrow = arrow(length = unit(0.75, "mm"), type = "closed"),
              ...) 
 }
@@ -98,7 +98,8 @@ episodes_st_cont_summary <- episodes_st_cont %>%
 
 # Font Kimberley from: https://www.dafont.com/kimberley.font
 # main_color <- "#B1271F"
-main_color <- "#84251D"
+# main_color <- "#84251D"
+main_color <- colorspace::lighten("#84251D", 0.2)
 
 titles <- c(
   "title" = "STRANGER THINGS",
@@ -106,11 +107,9 @@ titles <- c(
   Stranger Things is one of the most successful series on Netflix. It has an overall rating of 8.7
   on IMDB.
   There is variation between the ratings of the seasons and episodes, which is shown in this plot. 
-  Each dot represents the IMDB rating of an episode. The horizontal bars indicate 
+  Each **dot** represents the average IMDB rating of an episode. The **horizontal bars** indicate 
                           average season ratings (weighted by the number of votes).",
   "caption" = "Data: IMDB.com. Visualization: Ansgar Wolsing")
-
-
 
 ragg::agg_png(here(base_path, "plots/strangerthings_episode_ratings.png"), 
               width = 10, height = 6, res = 600, units = "in")
@@ -130,38 +129,28 @@ episodes_st_cont %>%
   with_shadow(
     geom_line(
       aes(ep_cont_extended, y = wgt_avg_season_rating),
-      col = main_color, size = 3, lty = "solid"),
+      col = "#84251D", size = 3, lty = "solid"),
     colour = "grey2", expand = 0.75, lineend = "butt", 
     ) +
-  with_shadow(
-    geom_point(color = main_color, size = 3),
-    expand = 0.5, colour = "grey2", sigma = 5
+  with_outer_glow(
+    geom_point(color = "grey80", size = 3),
+    expand = 15, colour = main_color, sigma = 21
   ) +
-  geom_richtext(
-    data = episodes_st_cont_summary,
-    aes(
-      x = ep_cont_median, y = 10.25,
-      label = glue::glue(
-        "<span style='font-size:9pt; color: grey72'>Season</span>
-         <span style='font-size:18pt; color: #84251D'>{seasonNumber}</span>"
-      )
-    ),
-    stat = "unique", hjust = 0.5, family = "Kimberley", fill = NA, label.size = 0
-  ) +
+    geom_richtext(
+      data = episodes_st_cont_summary,
+      aes(
+        x = ep_cont_median, y = 10.25,
+        label = glue::glue(
+          "<span style='font-size:9pt; color: grey72'>Season</span>
+         <span style='font-size:24pt; color: #84251D'>{seasonNumber}</span>"
+        )
+      ),
+      stat = "unique", hjust = 0.5, family = "Benguiat", fill = NA, label.size = 0
+  ) + 
   # Annotations
-  # annotate_richtext(label = "S1 E24 is the best rated<br>episode (9.3)",
-  #          x = 7, y = 9.4) +
-  # geom_curve2(aes(x = 18.25, xend = 23.25, y = 9.35, yend = 9.3)) +
-  # annotate_richtext(label = "7.8: S8 E9 has<br>the lowest rating",
-  #                   x = 185, y = 7.85) +
-  # geom_curve2(aes(x = 185, xend = 181, y = 7.8, yend = 7.8), curvature = -0.2) +
-  # End annotations
-  # scale_color_identity(
-  #   name = NULL,
-  #   breaks = colors[c("orange", "yellow")],
-  #   labels = c("Weighted season average", "Episode rating"),
-  #   # guide = "legend"
-  # ) +
+  annotate_richtext(label = "S2 E7 is odd<br>in many ways (6.1)",
+           x = 12, y = 6) +
+  # geom_curve2(aes(x = 8.25, xend = 13.75, y = 6.1, yend = 6.1)) +
   coord_cartesian(ylim = c(6, 10), clip = "off") +
   guides(
     color = "none"
@@ -180,7 +169,7 @@ episodes_st_cont %>%
     panel.background = element_rect(color = NA, fill = NA),
     text = element_text(color = "grey82"),
     plot.title = element_markdown(
-      family = "Kimberley", color = lighten(main_color, 0.1), size = 28, hjust = 0.5,
+      family = "Benguiat", color = "#84251D", size = 28, hjust = 0.5,
       margin = margin(t = 6)),
     plot.subtitle = element_textbox(
       margin = margin(t = 10, b = 28), width = 0.8, hjust = 0.5, halign = 0.5,
@@ -194,5 +183,6 @@ episodes_st_cont %>%
     )
 invisible(dev.off())
 
-# https://www.digitalspy.com/tv/ustv/a841946/stranger-things-season-2-episode-7-the-lost-sister-what-went-wrong/
+#' S2 E7: 
+#' https://www.digitalspy.com/tv/ustv/a841946/stranger-things-season-2-episode-7-the-lost-sister-what-went-wrong/
 
