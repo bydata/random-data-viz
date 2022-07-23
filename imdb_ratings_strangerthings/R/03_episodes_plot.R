@@ -1,5 +1,5 @@
 pacman::p_load("tidyverse", "RSQLite", "DBI", "vroom", "dbplyr", "colorspace", 
-               "ggfx", "ggtext", "ragg")
+               "ggfx", "ggtext", "ragg", "here")
 
 # Datasets: https://datasets.imdbws.com/
 # Documentation: https://www.imdb.com/interfaces/
@@ -100,9 +100,11 @@ episodes_st_cont_summary <- episodes_st_cont %>%
 # main_color <- "#B1271F"
 # main_color <- "#84251D"
 main_color <- colorspace::lighten("#84251D", 0.2)
+bg_color <- "grey9"
+title_pos <- 12.5
 
-titles <- c(
-  "title" = "STRANGER THINGS",
+titles <- list(
+  "title" = "STRANGER\nTHINGS",
   "subtitle" = "
   Stranger Things is one of the most successful series on Netflix. It has an overall rating of 8.7
   on IMDB.
@@ -135,47 +137,46 @@ episodes_st_cont %>%
   with_outer_glow(
     geom_point(color = "grey80", size = 3),
     expand = 15, colour = main_color, sigma = 21
-  ) +
-    geom_richtext(
-      data = episodes_st_cont_summary,
-      aes(
-        x = ep_cont_median, y = 10.25,
-        label = glue::glue(
-          "<span style='font-size:9pt; color: grey72'>Season</span>
-         <span style='font-size:24pt; color: #84251D'>{seasonNumber}</span>"
-        )
-      ),
-      stat = "unique", hjust = 0.5, family = "Benguiat", fill = NA, label.size = 0
+    ) +
+  # geom_point(color = "grey80", size = 3) + 
+  geom_richtext(
+    data = episodes_st_cont_summary,
+    aes(
+      x = ep_cont_median, y = 10.25,
+      label = glue::glue(
+        "<span style='font-size:9pt; color: grey72'>Season</span>
+       <span style='font-size:24pt; color: #84251D'>{seasonNumber}</span>"
+      )
+    ),
+    stat = "unique", hjust = 0.5, family = "Benguiat", fill = NA, label.size = 0
   ) + 
   # Annotations
-  annotate_richtext(label = "S2 E7 is odd<br>in many ways (6.1)",
-           x = 12, y = 6) +
-  # geom_curve2(aes(x = 8.25, xend = 13.75, y = 6.1, yend = 6.1)) +
-  coord_cartesian(ylim = c(6, 10), clip = "off") +
-  guides(
-    color = "none"
-  ) +
-  labs(title = titles["title"],
-       subtitle = titles["subtitle"],
-       caption = titles["caption"],
-       y = "Average Rating") +
+  annotate_richtext(label = "S2 E7 (\"The Lost Sister\")<br>is odd with a rating of 6.1",
+           x = 10.2, y = 6) +
+  # Custom title
+  shadowtext::geom_shadowtext(
+    data = NULL,
+    aes(x = nrow(episodes_st_cont) / 2, y = title_pos, label = titles$title), 
+    family = "Benguiat", color = bg_color, bg.color = "#84251D", size = 10,
+    hjust = 0.5, vjust = 0.7, inherit.aes = FALSE, lineheight = 0.8) +
+  # Custom subtitle
+  annotate(GeomTextBox, x = nrow(episodes_st_cont) / 2, y = title_pos - 0.75, 
+           label = titles$subtitle, color = "grey82", 
+           width = 0.8, hjust = 0.5, halign = 0.5, vjust = 1, size = 3.5,
+           lineheight = 1.25, family = "Montserrat", fill = NA, box.size = 0) + 
+  scale_y_continuous(breaks = seq(6, 10, 1), minor_breaks = seq(6, 10, 0.5)) +
+  coord_cartesian(ylim = c(6, title_pos), clip = "off") +
+  guides(color = "none") +
+  labs(caption = titles["caption"], y = "Average Rating") +
   theme_minimal(base_family = "Montserrat") +
   theme(
-    plot.background = element_rect(color = NA, fill = "grey9"),
+    plot.background = element_rect(color = NA, fill = bg_color),
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
     axis.text.y = element_text(color = "grey62"),
     panel.background = element_rect(color = NA, fill = NA),
     text = element_text(color = "grey82"),
-    plot.title = element_markdown(
-      family = "Benguiat", color = "#84251D", size = 28, hjust = 0.5,
-      margin = margin(t = 6)),
-    plot.subtitle = element_textbox(
-      margin = margin(t = 10, b = 28), width = 0.8, hjust = 0.5, halign = 0.5,
-      lineheight = 1.25
-    ),
-    plot.title.position = "plot",
     plot.caption = element_markdown(),
     panel.grid = element_blank(),
     panel.grid.major.y = element_line(color = "grey20", size = 0.2),
