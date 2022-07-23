@@ -99,7 +99,8 @@ episodes_st_cont_summary <- episodes_st_cont %>%
 # Font Kimberley from: https://www.dafont.com/kimberley.font
 # main_color <- "#B1271F"
 # main_color <- "#84251D"
-main_color <- colorspace::lighten("#84251D", 0.2)
+# main_color <- colorspace::lighten("#84251D", 0.2)
+main_color <- "#B1281E"
 bg_color <- "grey9"
 title_pos <- 12.5
 
@@ -131,7 +132,7 @@ episodes_st_cont %>%
   with_shadow(
     geom_line(
       aes(ep_cont_extended, y = wgt_avg_season_rating),
-      col = "#84251D", size = 3, lty = "solid"),
+      col = main_color, size = 3, lty = "solid"),
     colour = "grey2", expand = 0.75, lineend = "butt", 
     ) +
   with_outer_glow(
@@ -152,12 +153,12 @@ episodes_st_cont %>%
   ) + 
   # Annotations
   annotate_richtext(label = "S2 E7 (\"The Lost Sister\")<br>is odd with a rating of 6.1",
-           x = 10.2, y = 6) +
+           x = 10, y = 6) +
   # Custom title
   shadowtext::geom_shadowtext(
     data = NULL,
     aes(x = nrow(episodes_st_cont) / 2, y = title_pos, label = titles$title), 
-    family = "Benguiat", color = bg_color, bg.color = "#84251D", size = 10,
+    family = "Benguiat", color = bg_color, bg.color = "#B1281E", size = 10,
     hjust = 0.5, vjust = 0.7, inherit.aes = FALSE, lineheight = 0.8) +
   # Custom subtitle
   annotate(GeomTextBox, x = nrow(episodes_st_cont) / 2, y = title_pos - 0.75, 
