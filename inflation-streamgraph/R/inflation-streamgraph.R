@@ -182,7 +182,7 @@ p_annotated <- p +
   ) +
   annotate("text",
            x = as_date("2019-12-01"), y = 0,
-           label = "So viel haben Produkte zur Entwicklung\nder Konsumentenpreise beigetragen",
+           label = "So viel haben Produkte zur Entwicklung\nder Verbraucherpreise beigetragen",
            color = "grey30", 
            family = "Libre Franklin", size = 4, hjust = 0.5, vjust = 0.3) +
   # Highlight current inflation with text and a ruler
