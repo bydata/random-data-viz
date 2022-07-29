@@ -80,6 +80,21 @@ price_effects %>%
   arrange(effect_on_all_items)
 
 
+# Which product codes to choose or group?
+price_effects %>% 
+  group_by(code, label) %>% 
+  summarize(across(prev_year_change, 
+                   .fns = list("mean" = mean, "min" = min, "max" = max)), 
+            .groups = "drop") %>% 
+  arrange(-prev_year_change_max) 
+
+## select product groups to be shown
+labels_with_max_inflation <- c(
+  "Verkehr", "Nahrungsmittel und alkoholfreie Getränke",
+  "Bekleidung und Schuhe", "Wohnung, Wasser, Strom, Gas und andere Brennstoffe",
+  "Freizeit, Unterhaltung und Kultur")
+
+
 ## PLOT ------------------------------------------------------------------------
 
 #' Create a new transformation object to create a reverse date axis
@@ -101,37 +116,6 @@ c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
 }
 rev_date <- c_trans("reverse", "date")
 
-
-# Which product codes to choose or group?
-price_effects %>% 
-  group_by(code, label) %>% 
-  summarize(across(prev_year_change, 
-                   .fns = list("mean" = mean, "min" = min, "max" = max)), 
-            .groups = "drop") %>% 
-  arrange(-prev_year_change_max) 
-
-## select product groups from the data
-labels_with_max_inflation <- price_effects %>% 
-  group_by(code, label) %>% 
-  summarize(prev_month_change_max = max(prev_month_change), .groups = "drop") %>% 
-  arrange(-prev_month_change_max) %>% 
-  slice_max(order_by = prev_month_change_max, n = 6) %>% 
-  pull(label)
-labels_with_max_inflation
-
-## select by max weight
-labels_with_max_inflation <- c(
-  "Verkehr", "Nahrungsmittel und alkoholfreie Getränke",
-  "Möbel, Leuchten, Geräte u.a. Haushaltszubehör", "Wohnung, Wasser, Strom, Gas und andere Brennstoffe",
-  "Freizeit, Unterhaltung und Kultur")
-
-## select product groups
-labels_with_max_inflation <- c(
-  "Verkehr", "Nahrungsmittel und alkoholfreie Getränke",
-  "Bekleidung und Schuhe", "Wohnung, Wasser, Strom, Gas und andere Brennstoffe",
-  "Freizeit, Unterhaltung und Kultur")
-
-# color_pal <- c("#99428A", "#86B26F", "#37649D", "#FBC754", "#AC3759", "#C0C0C0", "#E2E2E2")
 color_pal <- c("#99428A", "#86B26F", "#37649D", "#FBC754", "#AC3759", "#E2E2E2")
 length(color_pal)
 
@@ -152,21 +136,18 @@ p <- price_effects %>%
   geom_stream(extra_span = 0.01, bw = 0.8, n_grid = 1e4, type = "mirror", 
               sort = "none", true_range = "both") +
   scale_x_continuous(
-    trans = rev_date, 
-    # breaks = seq(as_date("2020-01-01"), as_date("2022-07-01"), "6 months"), 
-    # breaks = waiver(),
-    # minor_breaks = minor_breaks_n(12),
-    n.breaks = 6,
-    position = "top",
+    trans = rev_date, n.breaks = 6, position = "top",
+    # format date labels to abbreviated month name + 2-digit year in all caps
     labels = function(x) {toupper(format(x, "%b %y"))}) +
   scale_fill_manual(values = color_pal) +
   coord_flip() +
-  guides(
-    # fill = guide_legend(ncol = 2)
-    fill = "none") +
+  guides(fill = "none") +
   labs(
     title = "Inflation in Deutschland",
-    caption = "Quelle: Statistisches Bundesamt, destatis.de. 
+    caption = "Dargestellt ist die Veränderung des Verbraucherpreisindex (VPI) 
+    zum Vorjahresmonat (COICOP 2-Steller Hierarchie,<br>
+    mehrere Gruppen zu \"Andere\" zusammengefasst).
+    Quelle: Statistisches Bundesamt, destatis.de. 
     Visualisierung: Ansgar Wolsing",
     fill = NULL
   ) +
@@ -182,17 +163,17 @@ p <- price_effects %>%
     plot.title = element_text(
       color = "black", family = "Libre Franklin SemiBold", size = 28, hjust = 0.5,
       margin = margin(t = 4, b = 8)),
-    plot.caption = element_markdown()
+    plot.caption = element_markdown(color = "grey30", lineheight = 1.1)
   )
 
-## Annotations
+## Text annotations
 p_annotated <- p + 
   annotate("text",
            x = as_date("2020-08-15"), y = -0.05,
            label = "Befristete Senkung der Mehrwertsteuer\naufgrund der Coronavirus-Pandemie",
            hjust = 0, family = "Libre Franklin", size = 4
            ) +
-  # Erklärung oben
+  # Explanation of the stream width
   annotate("segment",
            x = as_date("2019-12-25"), xend = as_date("2019-12-25"),
            y = -0.008, yend = 0.008,
@@ -204,7 +185,7 @@ p_annotated <- p +
            label = "So viel haben Produkte zur Entwicklung\nder Konsumentenpreise beigetragen",
            color = "grey30", 
            family = "Libre Franklin", size = 4, hjust = 0.5, vjust = 0.3) +
-  # Inflation aktuell (unten)
+  # Highlight current inflation with text and a ruler
   annotate("segment",
            x = as_date("2022-06-15"), xend = as_date("2022-06-15"),
            y = -0.045, yend = 0.045,
@@ -223,7 +204,7 @@ p_annotated <- p +
            x = as_date("2022-05-01"), y = 0.03,
            label = "Verkehr", color = "grey99", 
            family = "Libre Franklin", size = 3.5, hjust = 0.5) +
-  # Nahrungsmittel
+  # Products: Nahrungsmittel
   annotate("text",
            x = as_date("2021-12-01"), y = 0.03,
            label = "Nahrungsmittel &\nalkoholfreie Getränke", color = "grey9", 
@@ -231,7 +212,7 @@ p_annotated <- p +
   annotate("segment",
            x = as_date("2021-12-01"), xend = as_date("2021-12-01"), 
            y = 0.0295, yend = 0.0075, color = "grey9", size = 0.2) +
-  # Bekleidung & Schuhe
+  # Products: Bekleidung & Schuhe
   annotate("text",
            x = as_date("2021-08-01"), y = 0.03,
            label = "Bekleidung &\nSchuhe", color = "grey9", 
@@ -239,7 +220,7 @@ p_annotated <- p +
   annotate("segment",
            x = as_date("2021-08-01"), xend = as_date("2021-08-01"), 
            y = 0.0295, yend = 0.0015, color = "grey9", size = 0.2) +
-  # Freizeit
+  # Products: Freizeit
   annotate("text",
            x = as_date("2021-10-01"), y = -0.05,
            label = "Freizeit, Unterhaltung,\nKultur", color = "grey9", 
@@ -247,7 +228,7 @@ p_annotated <- p +
   annotate("segment",
            x = as_date("2021-10-01"), xend = as_date("2021-10-01"), 
            y = -0.028, yend = -0.0125, color = "grey9", size = 0.2) +
-  # Andere
+  # Products: Andere
   annotate("text",
            x = as_date("2022-01-01"), y = -0.05,
            label = "Andere Waren &\nDienstleistungen", color = "grey9", 
@@ -258,3 +239,4 @@ p_annotated <- p +
 
 ggsave(here(base_path, "plots", "streamgraph-inflation-de.png"),
        dpi = 600, width = 8, height = 10)
+
