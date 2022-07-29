@@ -38,8 +38,6 @@ prices <- read_csv2(here(base_path, "data", "61111-0004_flat.csv"),
                     na = "...",
                      locale = locale(encoding = "ISO-8859-15"))
 
-
-
 # keep only the 2-digit codes
 prices_level2 <- prices %>% 
   filter(str_detect(`3_Auspraegung_Code`, "^CC\\d{2}-\\d{2}$")) %>% 
@@ -49,7 +47,6 @@ prices_level2 <- prices %>%
          month_code = `2_Auspraegung_Code`,
          index = `PREIS1__Verbraucherpreisindex__2015=100`) %>% 
   mutate(month = str_extract(month_code, "[01][0-9]$"),
-         # month = as.numeric(month),
          date = ymd(paste0(year, month, "01")),
          month = as.numeric(str_remove(month, "^0"))) %>% 
   arrange(code, date) %>% 
@@ -59,9 +56,9 @@ prices_level2 <- prices %>%
   ungroup() %>% 
   select(-month_code) %>% 
   filter(year >= 2020 & !is.na(index)) 
-  # filter(!is.na(index))
 head(prices_level2)
 
+## DATA PREPARATION ------------------------------------------------------------
 
 ## join prices and weights
 price_effects <- prices_level2 %>% 
@@ -83,10 +80,11 @@ price_effects %>%
   arrange(effect_on_all_items)
 
 
-## PLOT -------------------------------------
+## PLOT ------------------------------------------------------------------------
 
-
-# https://stackoverflow.com/questions/43625341/reverse-datetime-posixct-data-axis-in-ggplot
+#' Create a new transformation object to create a reverse date axis
+#' https://stackoverflow.com/questions/43625341/reverse-datetime-posixct-data-axis-in-ggplot
+#' https://groups.google.com/g/ggplot2/c/qrcvqy6TdzI
 
 library(scales)
 c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
@@ -103,19 +101,6 @@ c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
 }
 rev_date <- c_trans("reverse", "date")
 
-
-
-price_effects %>% 
-  # mutate(date = as.POSIXct(date)) %>% 
-  ggplot(aes(date, effect_on_all_items, fill = label)) +
-  geom_stream(extra_span = 0.06, bw = 0.8, n_grid = 1e4) +
-  scale_x_continuous(trans = rev_date) +
-  scale_fill_brewer(palette = "Set3") +
-  coord_flip() +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom"
-  )
 
 # Which product codes to choose or group?
 price_effects %>% 
@@ -191,6 +176,7 @@ p <- price_effects %>%
     plot.margin = margin(6, 6, 6, 6),
     legend.position = "bottom",
     panel.grid.major.y = element_line(linetype = "dotted", color = "grey75", size = 0.2),
+    panel.grid.minor.y = element_blank(),
     axis.text.y.right = element_text(
       color = rgb(158, 158, 158, maxColorValue = 255), margin = margin(l = 5)),
     plot.title = element_text(
@@ -272,36 +258,3 @@ p_annotated <- p +
 
 ggsave(here(base_path, "plots", "streamgraph-inflation-de.png"),
        dpi = 600, width = 8, height = 10)
-
-
-
-
-
-# ---------
-
-
-# Area chart
-price_effects %>% 
-  ggplot(aes(date, effect_on_all_items, fill = label)) +
-  geom_area() +
-  scale_x_continuous(trans = rev_date) +
-  scale_fill_brewer(palette = "Set3") +
-  coord_flip() +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom"
-  )
-     
-
-# Stacked bar chart
-price_effects %>% 
-  mutate(date = as.POSIXct(date)) %>% 
-  ggplot(aes(date, effect_on_all_items, fill = label)) +
-  geom_col(position = "stack") +
-  scale_x_continuous(trans = rev_date) +
-  scale_fill_brewer(palette = "Set3") +
-  coord_flip() +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom"
-  )
