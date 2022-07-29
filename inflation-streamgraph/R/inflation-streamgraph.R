@@ -121,8 +121,7 @@ length(color_pal)
 
 
 p <- price_effects %>% 
-  mutate(# date = as.POSIXct(date),
-         label2 = ifelse(label %in% labels_with_max_inflation, label, "Andere"),
+  mutate(label2 = ifelse(label %in% labels_with_max_inflation, label, "Andere"),
          label2 = factor(label2, levels = c(labels_with_max_inflation, "Andere")))  %>% 
   group_by(date, label2) %>% 
   summarize(effect_on_all_items = sum(effect_on_all_items_yr), .groups = "drop") %>% 
@@ -196,6 +195,7 @@ p_annotated <- p +
            x = as_date("2022-07-01"), y = 0,
            label = "Inflation Juni 2022: 7,6 %", color = "grey30", 
            family = "Libre Franklin", size = 4, hjust = 0.5) +
+  # Products: Wohnung
   annotate(GeomShadowText,
            x = as_date("2022-05-01"), y = -0.0075,
            label = "Wohnung, Wasser,\nStrom, Gas", color = "grey9", 
