@@ -4,6 +4,7 @@ library(ggtext)
 library(lubridate)
 library(here)
 library(shadowtext)
+library(scales)
 
 base_path <- here("inflation-streamgraph")
 
@@ -101,7 +102,6 @@ labels_with_max_inflation <- c(
 #' https://stackoverflow.com/questions/43625341/reverse-datetime-posixct-data-axis-in-ggplot
 #' https://groups.google.com/g/ggplot2/c/qrcvqy6TdzI
 
-library(scales)
 c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
   a <- as.trans(a)
   b <- as.trans(b)
@@ -111,14 +111,13 @@ c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
   trans <- function(x) a$trans(b$trans(x))
   inv <- function(x) b$inverse(a$inverse(x))
   
-  trans_new(name, trans, inverse = inv, breaks = breaks, format=format)
+  trans_new(name, trans, inverse = inv, breaks = breaks, format = format)
   
 }
 rev_date <- c_trans("reverse", "date")
 
 color_pal <- c("#99428A", "#86B26F", "#37649D", "#FBC754", "#AC3759", "#E2E2E2")
 length(color_pal)
-
 
 p <- price_effects %>% 
   mutate(label2 = ifelse(label %in% labels_with_max_inflation, label, "Andere"),
@@ -135,7 +134,11 @@ p <- price_effects %>%
   geom_stream(extra_span = 0.01, bw = 0.8, n_grid = 1e4, type = "mirror", 
               sort = "none", true_range = "both") +
   scale_x_continuous(
-    trans = rev_date, n.breaks = 6, position = "top",
+    trans = rev_date, 
+    position = "top",
+    n.breaks = 6,
+    # breaks = as_date("2020-01-01"),
+    # minor_breaks = minor_breaks_n(2), 
     # format date labels to abbreviated month name + 2-digit year in all caps
     labels = function(x) {toupper(format(x, "%b %y"))}) +
   scale_fill_manual(values = color_pal) +
