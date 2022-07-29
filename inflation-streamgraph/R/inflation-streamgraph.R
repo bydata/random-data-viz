@@ -3,6 +3,7 @@ library(ggstream)
 library(ggtext)
 library(lubridate)
 library(here)
+library(shadowtext)
 
 base_path <- here("inflation-streamgraph")
 
@@ -53,10 +54,11 @@ prices_level2 <- prices %>%
          month = as.numeric(str_remove(month, "^0"))) %>% 
   arrange(code, date) %>% 
   group_by(code) %>% 
-  mutate(prev_month_change = index/lag(index) - 1) %>% 
+  mutate(prev_month_change = index / lag(index) - 1,
+         prev_year_change = index / lag(index, 12) - 1) %>% 
   ungroup() %>% 
   select(-month_code) %>% 
-  filter(year >= 2021 & !is.na(index)) 
+  filter(year >= 2020 & !is.na(index)) 
   # filter(!is.na(index))
 head(prices_level2)
 
@@ -65,13 +67,15 @@ head(prices_level2)
 price_effects <- prices_level2 %>% 
   inner_join(weights_level2, by = c("code", "label")) %>% 
   # divide weights by 10 since it's per mill, not percent???
-  mutate(effect_on_all_items = prev_month_change * weight / 1000)
+  mutate(effect_on_all_items = prev_month_change * weight / 1000,
+         effect_on_all_items_yr = prev_year_change * weight / 1000)
+
 
 # Check if the sum of effects corresponds with the overall inflation (compared to 
 # previous month) in a particular month 
 price_effects %>%
-  filter(date == as_date("2021-03-01")) %>% 
-  pull(effect_on_all_items) %>% 
+  filter(date == as_date("2022-06-01")) %>% 
+  pull(effect_on_all_items_yr) %>% 
   sum()
 
 price_effects %>% 
@@ -97,12 +101,12 @@ c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
   trans_new(name, trans, inverse = inv, breaks = breaks, format=format)
   
 }
-rev_date <- c_trans("reverse", "time")
+rev_date <- c_trans("reverse", "date")
 
 
 
 price_effects %>% 
-  mutate(date = as.POSIXct(date)) %>% 
+  # mutate(date = as.POSIXct(date)) %>% 
   ggplot(aes(date, effect_on_all_items, fill = label)) +
   geom_stream(extra_span = 0.06, bw = 0.8, n_grid = 1e4) +
   scale_x_continuous(trans = rev_date) +
@@ -116,9 +120,12 @@ price_effects %>%
 # Which product codes to choose or group?
 price_effects %>% 
   group_by(code, label) %>% 
-  summarize(across(prev_month_change, .fns = list("min" = min, "max" = max, "range" = range)), .groups = "drop") %>% 
-  arrange(prev_month_change_range)
+  summarize(across(prev_year_change, 
+                   .fns = list("mean" = mean, "min" = min, "max" = max)), 
+            .groups = "drop") %>% 
+  arrange(-prev_year_change_max) 
 
+## select product groups from the data
 labels_with_max_inflation <- price_effects %>% 
   group_by(code, label) %>% 
   summarize(prev_month_change_max = max(prev_month_change), .groups = "drop") %>% 
@@ -127,34 +134,142 @@ labels_with_max_inflation <- price_effects %>%
   pull(label)
 labels_with_max_inflation
 
-color_pal <- c("#784377", "#96B07C", "#486193", "#ECCA77", "#934658", "#C0C0C0", "#E2E2E2")
+## select by max weight
+labels_with_max_inflation <- c(
+  "Verkehr", "Nahrungsmittel und alkoholfreie Getränke",
+  "Möbel, Leuchten, Geräte u.a. Haushaltszubehör", "Wohnung, Wasser, Strom, Gas und andere Brennstoffe",
+  "Freizeit, Unterhaltung und Kultur")
+
+## select product groups
+labels_with_max_inflation <- c(
+  "Verkehr", "Nahrungsmittel und alkoholfreie Getränke",
+  "Bekleidung und Schuhe", "Wohnung, Wasser, Strom, Gas und andere Brennstoffe",
+  "Freizeit, Unterhaltung und Kultur")
+
+# color_pal <- c("#99428A", "#86B26F", "#37649D", "#FBC754", "#AC3759", "#C0C0C0", "#E2E2E2")
+color_pal <- c("#99428A", "#86B26F", "#37649D", "#FBC754", "#AC3759", "#E2E2E2")
 length(color_pal)
 
 
-
 p <- price_effects %>% 
-  mutate(date = as.POSIXct(date),
-         label2 = ifelse(label %in% labels_with_max_inflation, label, "other"),
-         label2 = factor(label2, levels = c(labels_with_max_inflation, "other")))  %>% 
+  mutate(# date = as.POSIXct(date),
+         label2 = ifelse(label %in% labels_with_max_inflation, label, "Andere"),
+         label2 = factor(label2, levels = c(labels_with_max_inflation, "Andere")))  %>% 
   group_by(date, label2) %>% 
-  summarize(effect_on_all_items = sum(effect_on_all_items), .groups = "drop") %>% 
+  summarize(effect_on_all_items = sum(effect_on_all_items_yr), .groups = "drop") %>% 
   ggplot(aes(date, effect_on_all_items, fill = label2)) +
-  geom_stream(extra_span = 0.06, bw = 0.8, n_grid = 1e4, type = "mirror", 
+  # light background for highlighting
+  annotate("rect",
+           xmin = as_date("2020-07-02"), xmax = as_date("2020-12-30"),
+           ymin = -Inf, ymax = Inf,
+           fill = "#EEF9FA"
+  ) +
+  geom_stream(extra_span = 0.01, bw = 0.8, n_grid = 1e4, type = "mirror", 
               sort = "none", true_range = "both") +
   scale_x_continuous(
-    trans = rev_date, n.breaks = 6, position = "top",
+    trans = rev_date, 
+    # breaks = seq(as_date("2020-01-01"), as_date("2022-07-01"), "6 months"), 
+    # breaks = waiver(),
+    # minor_breaks = minor_breaks_n(12),
+    n.breaks = 6,
+    position = "top",
     labels = function(x) {toupper(format(x, "%b %y"))}) +
   scale_fill_manual(values = color_pal) +
   coord_flip() +
-  guides(fill = guide_legend(ncol = 1)) +
+  guides(
+    # fill = guide_legend(ncol = 2)
+    fill = "none") +
+  labs(
+    title = "Inflation in Deutschland",
+    caption = "Quelle: Statistisches Bundesamt, destatis.de. 
+    Visualisierung: Ansgar Wolsing",
+    fill = NULL
+  ) +
   theme_void(base_family = "Libre Franklin") +
   theme(
     plot.background = element_rect(color = NA, fill = "white"),
     plot.margin = margin(6, 6, 6, 6),
     legend.position = "bottom",
     panel.grid.major.y = element_line(linetype = "dotted", color = "grey75", size = 0.2),
-    axis.text.y.right = element_text(color = rgb(158, 158, 158, maxColorValue = 255))
+    axis.text.y.right = element_text(
+      color = rgb(158, 158, 158, maxColorValue = 255), margin = margin(l = 5)),
+    plot.title = element_text(
+      color = "black", family = "Libre Franklin SemiBold", size = 28, hjust = 0.5,
+      margin = margin(t = 4, b = 8)),
+    plot.caption = element_markdown()
   )
+
+## Annotations
+p_annotated <- p + 
+  annotate("text",
+           x = as_date("2020-08-15"), y = -0.05,
+           label = "Befristete Senkung der Mehrwertsteuer\naufgrund der Coronavirus-Pandemie",
+           hjust = 0, family = "Libre Franklin", size = 4
+           ) +
+  # Erklärung oben
+  annotate("segment",
+           x = as_date("2019-12-25"), xend = as_date("2019-12-25"),
+           y = -0.008, yend = 0.008,
+           col = "grey30", size = 0.25,
+           arrow = arrow(type = "open", angle = 90, ends = "both", length = unit(1, "mm"))
+  ) +
+  annotate("text",
+           x = as_date("2019-12-01"), y = 0,
+           label = "So viel haben Produkte zur Entwicklung\nder Konsumentenpreise beigetragen",
+           color = "grey30", 
+           family = "Libre Franklin", size = 4, hjust = 0.5, vjust = 0.3) +
+  # Inflation aktuell (unten)
+  annotate("segment",
+           x = as_date("2022-06-15"), xend = as_date("2022-06-15"),
+           y = -0.045, yend = 0.045,
+           col = "grey30", size = 0.25,
+           arrow = arrow(type = "open", angle = 90, ends = "both", length = unit(1, "mm"))
+           ) +
+  annotate("text",
+           x = as_date("2022-07-01"), y = 0,
+           label = "Inflation Juni 2022: 7,6 %", color = "grey30", 
+           family = "Libre Franklin", size = 4, hjust = 0.5) +
+  annotate(GeomShadowText,
+           x = as_date("2022-05-01"), y = -0.0075,
+           label = "Wohnung, Wasser,\nStrom, Gas", color = "grey9", 
+           family = "Libre Franklin", size = 3.5, bg.color = "white", hjust = 0.5) +
+  annotate("text",
+           x = as_date("2022-05-01"), y = 0.03,
+           label = "Verkehr", color = "grey99", 
+           family = "Libre Franklin", size = 3.5, hjust = 0.5) +
+  # Nahrungsmittel
+  annotate("text",
+           x = as_date("2021-12-01"), y = 0.03,
+           label = "Nahrungsmittel &\nalkoholfreie Getränke", color = "grey9", 
+           family = "Libre Franklin", size = 3.5, hjust = 0) +
+  annotate("segment",
+           x = as_date("2021-12-01"), xend = as_date("2021-12-01"), 
+           y = 0.0295, yend = 0.0075, color = "grey9", size = 0.2) +
+  # Bekleidung & Schuhe
+  annotate("text",
+           x = as_date("2021-08-01"), y = 0.03,
+           label = "Bekleidung &\nSchuhe", color = "grey9", 
+           family = "Libre Franklin", size = 3.5, hjust = 0) +
+  annotate("segment",
+           x = as_date("2021-08-01"), xend = as_date("2021-08-01"), 
+           y = 0.0295, yend = 0.0015, color = "grey9", size = 0.2) +
+  # Freizeit
+  annotate("text",
+           x = as_date("2021-10-01"), y = -0.05,
+           label = "Freizeit, Unterhaltung,\nKultur", color = "grey9", 
+           family = "Libre Franklin", size = 3.5, hjust = 0) +
+  annotate("segment",
+           x = as_date("2021-10-01"), xend = as_date("2021-10-01"), 
+           y = -0.028, yend = -0.0125, color = "grey9", size = 0.2) +
+  # Andere
+  annotate("text",
+           x = as_date("2022-01-01"), y = -0.05,
+           label = "Andere Waren &\nDienstleistungen", color = "grey9", 
+           family = "Libre Franklin", size = 3.5, hjust = 0) +
+  annotate("segment",
+           x = as_date("2022-01-01"), xend = as_date("2022-01-01"), 
+           y = -0.032, yend = -0.022, color = "grey9", size = 0.2)
+
 ggsave(here(base_path, "plots", "streamgraph-inflation-de.png"),
        dpi = 600, width = 8, height = 10)
 
@@ -167,7 +282,6 @@ ggsave(here(base_path, "plots", "streamgraph-inflation-de.png"),
 
 # Area chart
 price_effects %>% 
-  mutate(date = as.POSIXct(date)) %>% 
   ggplot(aes(date, effect_on_all_items, fill = label)) +
   geom_area() +
   scale_x_continuous(trans = rev_date) +
