@@ -45,7 +45,7 @@ bundesliga_club_colors <- c(
   "#ED1C24", 
   "#000000",
   "#1C63B7",
-  "grey70",
+  "#dadada",
   "#005CA9",
   "#D4011D",
   "#65B32E",
@@ -98,8 +98,6 @@ voronoi_buli <- st_join(voronoi, df_buli) %>%
 
 ## PLOT ========================================================================
 
-
-
 seed <- 4711
 set.seed(seed)
 voronoi_buli %>%
@@ -110,35 +108,23 @@ voronoi_buli %>%
   geom_sf(data = df_buli,
           aes(geometry = coordinates), size = 3,
           shape = 21, col = "white", fill = "grey12") +
-  # geom_sf(
-  #   aes(geometry = st_centroid(geometry)),
-  #   shape = 21, fill = "grey8", color = "white"
-  # ) +
   geom_richtext(
     aes(label = icon, 
         x = st_coordinates(st_centroid(geometry))[, "X"],
         y = st_coordinates(st_centroid(geometry))[, "Y"]),
     fill = NA, label.size = 0
   ) +
-  # ggimage::geom_image(
-  #   aes(image = here(icons_folder, icons_files),
-  #       x = st_coordinates(st_centroid(geometry))[, "X"],
-  #       y = st_coordinates(st_centroid(geometry))[, "Y"]),
-  #   size = 0.035
-  # ) +
-  # colorspace::scale_fill_discrete_sequential(palette = "Grays") +
-  # scale_fill_manual(values = bundesliga_club_colors) +
   scale_fill_identity() +
   labs(
-    title = "Was wäre wenn jeder den nächsten Bundesliga-Verein unterstützte?",
+    title = "Was wäre wenn jeder den nächsten<br>Bundesliga-Verein unterstützte?",
     caption = "Shapefile: Natural Earth. Visualisierung: Ansgar Wolsing"
   ) +
   theme_void(base_family = "Helvetica Neue") +
   theme(
     plot.background = element_rect(color = NA, fill = "grey87"),
     plot.margin = margin(6, 6, 6, 6),
-    plot.title = element_textbox(family = "Oswald", size = 28,
-                              hjust = 0.5, width = 1, lineheight = 1.15),
+    plot.title = element_markdown(family = "Oswald", size = 28, angle = 1.5,
+                              hjust = 0.5, lineheight = 1.15),
     plot.caption = element_markdown(hjust = 0.5)
   )
 ggsave(here(base_path, "bundesliga-voronoi-map.png"), dpi = 500, width = 7.5, height = 9)
