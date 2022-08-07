@@ -1,5 +1,6 @@
-#' INSPIRATION: https://github.com/VictimOfMaths/30DayMapChallenge/blob/main/Day3_Polygons.R
+#' INSPIRATION & code for Voronoi map: 
 #' Colin Angus
+#' https://github.com/VictimOfMaths/30DayMapChallenge/blob/main/Day3_Polygons.R
 
 library(tidyverse)
 library(sf)
