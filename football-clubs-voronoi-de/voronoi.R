@@ -13,7 +13,7 @@ base_path <- here("football-clubs-voronoi-de")
 # sparql_endpoint <- "https://query.wikidata.org/sparql?query=SELECT%20%3Fclub%20%3FclubLabel%20%3Fvenue%20%3FvenueLabel%20%3Fcoordinates%0AWHERE%0A%7B%0A%09%3Fclub%20wdt%3AP31%20wd%3AQ476028%20.%0A%09%3Fclub%20wdt%3AP115%20%3Fvenue%20.%0A%09%3Fvenue%20wdt%3AP625%20%3Fcoordinates%20.%0A%09SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22%20%7D%0A%7D"
 df <- read_csv(here(base_path, "data", "query.csv"))
 
-bundesliga_clubs <- c(
+clubs <- c(
   "Borussia Dortmund",
   "FC Bayern Munich",
   "VfB Stuttgart",
@@ -34,7 +34,7 @@ bundesliga_clubs <- c(
   "Eintracht Frankfurt"
 )
 
-bundesliga_club_colors <- c(
+club_colors <- c(
   "#FDE100",
   "#DC052D",
   rgb(227, 34, 25, maxColorValue = 255),
@@ -54,33 +54,33 @@ bundesliga_club_colors <- c(
   "#005CA9",
   "#E1000F"
 )
-names(bundesliga_club_colors) <- bundesliga_clubs
+names(club_colors) <- clubs
 
-df_buli <- subset(df, clubLabel %in% bundesliga_clubs) %>% 
+df_clubs <- subset(df, clubLabel %in% clubs) %>% 
   group_by(clubLabel) %>% 
   slice_head(n = 1) %>% 
   ungroup() %>% 
   st_as_sf(wkt = "coordinates", crs = "EPSG:4326")
 
 ## GEOMETRIES ==================================================================
-## Area of Cologne
+## Shapefile Germany
 de <- rnaturalearth::ne_countries(scale = 50, country = "Germany", returnclass = "sf")
 de <- st_transform(de, crs = "EPSG:4326")
 
-st_crs(de) == st_crs(df_buli)
-
+# check if both dataset have the same CRS
+st_crs(de) == st_crs(df_clubs)
 
 # club icons
 icons_folder <- here(base_path, "team_icons")
 icons_files <- list.files(icons_folder)
 icons_tags <- glue::glue("<img src=\"{here(icons_folder, icons_files)}\" width=30>")
-names(icons_tags) <- bundesliga_clubs
+names(icons_tags) <- clubs
 
 
 ## VORONOI TESSELATION =========================================================
 
 # Create Voronoi cells based on club grounds
-voronoi <- df_buli %>%
+voronoi <- df_clubs %>%
   st_union() %>%
   st_voronoi() %>%
   st_collection_extract()
@@ -90,9 +90,9 @@ voronoi <- voronoi[unlist(st_intersects(de, voronoi))] %>%
   st_intersection(de) %>% 
   st_as_sf()
 
-voronoi_buli <- st_join(voronoi, df_buli) %>% 
-  inner_join(data.frame(clubLabel = bundesliga_clubs, primary_color = bundesliga_club_colors)) %>% 
-  inner_join(data.frame(clubLabel = bundesliga_clubs, icon = icons_tags)) %>% 
+voronoi_buli <- st_join(voronoi, df_clubs) %>% 
+  inner_join(data.frame(clubLabel = clubs, primary_color = club_colors)) %>% 
+  inner_join(data.frame(clubLabel = clubs, icon = icons_tags)) %>% 
   # rename(geometry = 1) %>% 
   st_as_sf
 
@@ -106,7 +106,7 @@ voronoi_buli %>%
   geom_sf(
     aes(fill = primary_color),
     col = "white", size = 0.75, show.legend = FALSE) +
-  geom_sf(data = df_buli,
+  geom_sf(data = df_clubs,
           aes(geometry = coordinates), size = 3,
           shape = 21, col = "white", fill = "grey12") +
   geom_richtext(
