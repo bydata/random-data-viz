@@ -117,9 +117,9 @@ voronoi_buli %>%
   scale_fill_identity() +
   labs(
     title = "Was wäre wenn jeder den nächsten<br>Bundesliga-Verein unterstützte?",
-    caption = "Shapefile: Natural Earth. Visualisierung: Ansgar Wolsing"
+    caption = "Shapefile: Natural Earth, Koordinaten: Wikidata. Visualisierung: Ansgar Wolsing"
   ) +
-  theme_void(base_family = "Helvetica Neue") +
+  theme_void(base_family = "Inter") +
   theme(
     plot.background = element_rect(color = NA, fill = "grey87"),
     plot.margin = margin(6, 6, 6, 6),
