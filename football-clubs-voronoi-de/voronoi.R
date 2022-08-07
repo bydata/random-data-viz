@@ -60,12 +60,13 @@ df_clubs <- subset(df, clubLabel %in% clubs) %>%
   group_by(clubLabel) %>% 
   slice_head(n = 1) %>% 
   ungroup() %>% 
-  st_as_sf(wkt = "coordinates", crs = "EPSG:4326")
+  st_as_sf(wkt = "coordinates", crs = "EPSG:4326") %>% 
+  st_transform(crs = "EPSG:4839")
 
 ## GEOMETRIES ==================================================================
 ## Shapefile Germany
 de <- rnaturalearth::ne_countries(scale = 50, country = "Germany", returnclass = "sf")
-de <- st_transform(de, crs = "EPSG:4326")
+de <- st_transform(de, crs = "EPSG:4839")
 
 # check if both dataset have the same CRS
 st_crs(de) == st_crs(df_clubs)
@@ -99,8 +100,6 @@ voronoi_buli <- st_join(voronoi, df_clubs) %>%
 
 ## PLOT ========================================================================
 
-seed <- 4711
-set.seed(seed)
 voronoi_buli %>%
   ggplot() +
   geom_sf(
