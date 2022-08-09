@@ -1,4 +1,4 @@
-#' INSPIRATION & code for Voronoi map: 
+#' INSPIRATION & code for Voronoi tesselation: 
 #' Colin Angus
 #' https://github.com/VictimOfMaths/30DayMapChallenge/blob/main/Day3_Polygons.R
 
