@@ -34,8 +34,11 @@ if (FALSE) {
 
 # select relevant columns
 charging_stations_points <- charging_stations$osm_points %>%
-  select(osm_id, name, brand, operator, network, capacity, fee, charge, opening_hours, geometry) %>% 
+  select(osm_id, name, brand, operator, network, capacity, fee, charge, opening_hours, 
+         # starts_with("socket"), 
+         geometry) %>% 
   st_transform(crs)
+colnames(charging_stations_points)
 st_crs(charging_stations_points)
 st_crs(charging_stations_points) == st_crs(europe)
 
@@ -99,7 +102,7 @@ target <- st_geometry(initial)
 
 # Create the grid of hexagons
 grid <- st_make_grid(target,
-                     cellsize = 25000,
+                     cellsize = 20000 * sqrt(400 / 346.4),
                      crs = st_crs(initial),
                      what = "polygons",
                      square = FALSE # for hex, TRUE for squares
@@ -107,7 +110,6 @@ grid <- st_make_grid(target,
 # Add index, transform list to dataframe
 grid <- st_sf(index = 1:length(lengths(grid)), grid)
 plot(grid)
-
 
 # get the area of one cell of the grid
 area_gridcells <- st_area(grid[1, ])
