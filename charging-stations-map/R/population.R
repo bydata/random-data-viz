@@ -16,7 +16,6 @@ europe <- filter(europe, !admin %in% c("Russia", "Ukraine", "Belarus", "Moldova"
 st_crs(europe)
 
 
-# shape <- select(europe, admin)
 shape <- st_union(europe)
 initial <- shape
 # initial$index_target <- 1:nrow(initial)
@@ -50,7 +49,7 @@ grid_europe <- st_filter(grid, europe)
 st_crs(pop_raster) == st_crs(grid_europe)
 pop_grid_europe <- st_join(pop_raster, grid_europe, join = st_within)
 
-foo <- aggregate(
+pop_grid_europe_agg <- aggregate(
   pop_grid_europe %>% 
     select(TOT_P_2018, geometry),
   by = list("index" = pop_grid_europe$index),
@@ -59,8 +58,9 @@ foo <- aggregate(
   do_union = FALSE
 )
 
+bg_color <- "white"
 p <- grid_europe %>% 
-  left_join(st_drop_geometry(foo), by = "index") %>% 
+  left_join(st_drop_geometry(pop_grid_europe_agg), by = "index") %>% 
   mutate(TOT_P_2018 = replace_na(TOT_P_2018, 0)) %>% 
   rename(geometry = grid) %>% 
   ggplot() +
