@@ -55,7 +55,7 @@ p <- bind_rows(df, df, .id = "state") %>%
   labs(
     title = "Été météorologique 2022 - France",
     subtitle = "Écart à la moyenne quotidienne de référence 1991-2020\nde la température moyenne agrégée",
-    caption = "Données : Infoclimat.fr"
+    caption = "Données : Infoclimat.fr\n#ShowYourStripes"
   )
 
 p_anim <- p +
