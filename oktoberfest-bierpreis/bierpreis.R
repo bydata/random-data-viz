@@ -36,13 +36,14 @@ bier <- read_csv(bierpreis_url)
 # Museumszelt: 12,60 Euro (2019: 10,80 Euro)
 # Volkssängerzelt: 12,90 Euro (2019: 11,40 Euro)
 
-(bierpreis_2022 <- round(mean(c(13.5, 12.8, 13.4, 12.9, 13.4, 13.6, 13.7, 13.6, 13.7, 
-                         13.5, 13.5, 13.6, 13.7, 16.8,
-                         13.2, 13.4, 12.6, 12.9)), 2))
+bierpreise_2022 <- c(13.5, 12.8, 13.4, 12.9, 13.4, 13.6, 13.7, 13.6, 13.7, 
+                     13.5, 13.5, 13.6, 13.7, 16.8,
+                     13.2, 13.4, 12.6, 12.9)
+(bierpreis_mean_2022 <- round(mean(bierpreise_2022), 2))
 
 bier <- bier %>% 
   add_row(jahr = 2020:2021, bier_preis = NA) %>% 
-  add_row(jahr = 2022, bier_preis = bierpreis_2022) %>% 
+  add_row(jahr = 2022, bier_preis = bierpreis_mean_2022) %>% 
   mutate(index_bier = 100 * bier_preis / .$bier_preis[which(.$jahr == 1991)])
 
 
@@ -89,33 +90,6 @@ cpi_bier_gastro_wide <- cpi_bier_gastro %>%
               names_repair = janitor::make_clean_names)
 
 
-# bier %>% 
-#   filter(jahr >= 1991) %>% 
-#   inner_join(cpi, by = "jahr") %>% 
-#   inner_join(cpi_bier_gastro_wide, by = "jahr") %>% 
-#   ggplot(aes(jahr)) +
-#   geom_step(aes(y = index_bier, color = "Wiesn")) +
-#   geom_step(
-#     data = ~subset(., !is.na(bier_preis)),
-#     aes(y = index_bier, color = "Wiesn"),
-#     linetype = "dashed") +
-#   geom_step(aes(y = index_1991, color = "Verbraucherpreisindex (August)")) +
-#   geom_step(aes(y = index_bier_1991, color = "Verbraucherpreisindex BIER (August)")) +
-#   geom_point(
-#     aes(y = index_bier, color = "Wiesn"),
-#     data = . %>% filter(jahr == max(jahr))) +
-#   ggrepel::geom_text_repel(
-#     data = . %>% filter(jahr == max(jahr)),
-#     aes(y = index_bier, label = jahr)) +
-#   theme_minimal() +
-#   theme(
-#     plot.background = element_rect(color = "white", fill = "white"),
-#     legend.position = "top"
-#   )
-# ggsave(here(base_path, "bierpreise.png"), width = 6, height = 5)
-
-
-
 line_colors <- c("grey70", "grey40", "grey20", "#0393CD")
 
 bier %>% 
@@ -131,10 +105,18 @@ bier %>%
     linetype = "dotted", size = 0.8) +
   geom_point(
     data = . %>% filter(jahr == max(jahr))) +
-  # ggrepel::geom_text_repel(
-  #   data = . %>% filter(jahr == max(jahr), index_type == "index_bier"),
-  #   aes(label = jahr),
-  #   family = "Roboto Condensed", direction = "x", hjust = 0) +
+  
+  # # beeswarm of prices 2022
+  # ggbeeswarm::geom_quasirandom(
+  #   data = data.frame(jahr = 2022.5, y = bierpreise_2022 + 300, index_type = "index_bier"),
+  #   aes(jahr, y),
+  #   size = 1, shape = 21
+  # ) +
+  # ggdist::stat_gradientinterval(
+  #   data = data.frame(jahr = 2022.5, y = bierpreise_2022 + 300, index_type = "index_bier"),
+  #   aes(jahr, y),
+  #   size = 0.2
+  # ) +
   geom_text(
     data = . %>% filter(jahr == max(jahr), index_type == "index_bier"),
     aes(label = jahr),
@@ -143,7 +125,6 @@ bier %>%
     "richtext",
     label = c("Warenkorb<br>gesamt", 
               "Bier", "Gastronomie", "**Mittlerer Bierpreis Wiesn**"),
-    # x = c(2020, 2016, 2021),
     x = c(rep(2022.1, 3), 2016),
     y = c(180, 160, 199, 260),
     color = line_colors,
@@ -151,20 +132,29 @@ bier %>%
     hjust = c(0, 0, 0, 1), family = "Roboto Condensed", label.size = 0, fill = NA,
     lineheight = 0.8
   ) +
+  annotate(
+    "text",
+    label = str_wrap(c("1991 kostete die Maß umgerechnet 4,21 EUR",
+                       "2022 liegt der Preis im Mittel bei 13,54 EUR"), 24),
+    x = c(1990, 2015), 
+    y = c(135, 300),
+    hjust = 0, size = 2.5, family = "Roboto Condensed", color = "grey30"
+  ) + 
   scale_x_continuous(limits = c(NA, 2025)) +
   scale_y_continuous() +
   scale_color_manual(values = line_colors) +
   coord_cartesian(ylim = c(NA, 300), clip = "off") +
   guides(color = "none") +
   labs(
-    title = "Preis für <span style='color:#0393CD'>Maß Bier</span> auf der Wiesn
+    title = "Preis für die <span style='color:#0393CD'>Maß Bier</span> auf der Wiesn
     mehr als verdreifacht seit 1991",
     subtitle = "Ein Indexwert von 100 entspricht den Preisen von 1991",
-    caption = "Für die Verbraucherpreise wurden die monatlichen Werte für August verwendet.<br>
-    Gastronomie = CC13-1111: Restaurants, Cafes, Straßenverkauf und Ähnliches.<br>
-    Daten Oktoberfest: Stadt München (1991-2019), oktoberfest.de (2022),
-    Verbraucherpreise: Statistisches Bundesamt.<br>Visualisierung: Ansgar Wolsing",
-    x = NULL
+    caption = "Für die Verbraucherpreise wurden die monatlichen Werte für August verwendet. 
+    Gastronomie = CC13-1111: Restaurants, Cafes, Straßenverkauf und Ähnliches. 
+    Daten Oktoberfest: Stadt München (1991-2019), oktoberfest.de, ungewichtetes Mittel (2022),
+    Verbraucherpreise: Statistisches Bundesamt. 
+    Visualisierung: Ansgar Wolsing",
+    x = NULL, y = "Index (Preise 1991 = 100)"
   ) +
   theme_minimal(base_family = "Roboto Condensed") +
   theme(
@@ -172,11 +162,13 @@ bier %>%
     legend.position = "top",
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    text = element_text(color = "grey24"),
+    text = element_text(color = "grey30"),
     plot.title = element_markdown(color = "black", face = "bold"),
     plot.title.position = "plot",
-    plot.caption = element_markdown(lineheight = 1.1, hjust = 0)
+    plot.caption = element_textbox(
+      lineheight = 1.1, hjust = 0, width = 1,
+      margin = margin(t = 6, b = 6))
   )
-ggsave(here(base_path, "bierpreise.png"), width = 6.5, height = 5)
+ggsave(here(base_path, "bierpreise.png"), width = 6.5, height = 5.5)
 
 
