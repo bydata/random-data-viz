@@ -28,7 +28,6 @@ df <- df %>%
            TRUE ~ country_name
          ))
 
-
 df %>%
   ggplot(aes(country_name, avg_d)) +
   geom_beeswarm() +
@@ -96,7 +95,7 @@ capitals <- c(
 
 df_plot %>% 
   ggplot(aes(as.numeric(country_name), avg_d)) +
-  geom_hline(aes(yintercept = mean(avg_d)), color = "grey20") +
+  geom_hline(aes(yintercept = mean(avg_d)), color = "grey20", size = 0.3) +
   annotate("label", label = "Average",
            x = 0.5, y = mean(df_plot$avg_d), hjust = 0, label.size = 0, 
            fill = alpha("grey20", 0.2), family = "Roboto Condensed", size = 3)+ 
@@ -113,7 +112,7 @@ df_plot %>%
       trans = ~., breaks = seq_along(levels(df_plot$country_name)),
       labels = levels(df_plot$country_name)
       ),
-    expand = expansion(add = c(0, 1))) +
+    expand = expansion(add = c(0.5, 0.25))) +
   scale_y_continuous(breaks = seq(0, 300, 50)) +
   colorspace::scale_fill_binned_diverging(
     palette = "Purple-Green", n_interp = 5) +
@@ -155,39 +154,3 @@ df_plot %>%
   )
 ggsave(here(base_path, "makeover-monday-2022-39-europe.png"), width = 6, 
        height = 8.5, scale = 1)
-
-
-
-
-
-seed <- 123
-
-set.seed(seed)
-df %>%
-  ggplot(aes(x = 1, avg_d)) +
-  geom_quasirandom(aes(fill = country_name == "Germany"), shape = 21, col = "white", size = 3) +
-  scale_fill_manual(values = c("FALSE" = "grey74", "TRUE" = "purple")) +
-  coord_flip() +
-  guides(fill = "none")
-# ggsave("makeover-monday-2022-39-de.png", width = 7, height = 5)
-
-set.seed(seed)
-df %>%
-  ggplot(aes(x = 1, avg_d)) +
-  geom_quasirandom(aes(fill = country_name == "France"), shape = 21, col = "white", size = 3) +
-  scale_fill_manual(values = c("FALSE" = "grey74", "TRUE" = "purple")) +
-  coord_flip() +
-  guides(fill = "none")
-ggsave("makeover-monday-2022-39-fr.png", width = 7, height = 5)
-
-set.seed(seed)
-df %>%
-  ggplot(aes(x = 1, avg_d)) +
-  geom_quasirandom(aes(fill = country_name == "Austria"), shape = 21, col = "white", size = 3) +
-  scale_fill_manual(values = c("FALSE" = "grey74", "TRUE" = "purple")) +
-  coord_flip(xlim = c(0.5, 1.5)) +
-  guides(fill = "none")
-ggsave("makeover-monday-2022-39-at.png", width = 7, height = 5)
-
-
-# https://github.com/EDJNet/internet_speed/
