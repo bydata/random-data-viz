@@ -28,18 +28,9 @@ df <- df %>%
            TRUE ~ country_name
          ))
 
-df %>%
-  ggplot(aes(country_name, avg_d)) +
-  geom_beeswarm() +
-  coord_flip()
 
-df %>%
-  ggplot(aes(x = 1, avg_d)) +
-  geom_beeswarm(aes(col = country_name), size = 2) +
-  coord_flip()
-
-
-# http://www.maartenlambrechts.com/2019/09/04/splitting-EU-regions-making-of.html
+#' Inspiration: 
+#' http://www.maartenlambrechts.com/2019/09/04/splitting-EU-regions-making-of.html
 
 df_plot <- df  %>% 
   na.omit() %>%
@@ -113,7 +104,7 @@ df_plot %>%
       labels = levels(df_plot$country_name)
       ),
     expand = expansion(add = c(0.5, 0.25))) +
-  scale_y_continuous(breaks = seq(0, 300, 50)) +
+  scale_y_continuous(breaks = seq(0, 300, 50), position = "right") +
   colorspace::scale_fill_binned_diverging(
     palette = "Purple-Green", n_interp = 5) +
   guides(fill = guide_colorbar(title.position = "top")) +
@@ -135,7 +126,7 @@ df_plot %>%
   theme_minimal(base_family = "Roboto Condensed") +
   theme(
     plot.background = element_rect(color = "white", fill = "white"),
-    legend.position = c(0.125, 1.05),
+    legend.position = c(0.125, 1.14),
     legend.direction = "horizontal",
     legend.key.height = unit(3, "mm"),
     legend.key.width = unit(15, "mm"),
@@ -148,7 +139,7 @@ df_plot %>%
     plot.subtitle = element_textbox(
       width = 0.98, hjust = 0, lineheight = 1.1,
       # make space for the legend
-      margin = margin(t = 4, b = 48)),
+      margin = margin(t = 4, b = 60)),
     plot.caption = element_textbox(width = 0.98, hjust = 0, lineheight = 1.1),
     plot.caption.position = "plot"
   )
