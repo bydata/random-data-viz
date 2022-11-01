@@ -134,7 +134,7 @@ temp_current_smoothed %>%
           ifelse(diff_from_normal > 0, "+", "-"),
           round(diff_from_normal, 1), "°C"), group = day),
     size = 0.3, con.size = 0.3, label.buffer	= unit(5, "mm"), expand = unit(2, "mm"),
-    label.fontsize = 8
+    label.fontsize = 8, label.fill = alpha("white", 0.5)
   ) +
   annotate(
     "text", x = 365, y = 3.5, label = "normal 1991-2020", hjust = 1,
