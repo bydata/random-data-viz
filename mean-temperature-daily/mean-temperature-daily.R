@@ -49,9 +49,9 @@ temp_current <- temp_prep %>%
   mutate(day = row_number()) 
 
 
-# Daily averages in between 1991 and 2020
+# Daily averages in between 1961 and 1990
 temp_normal <- temp_prep %>% 
-  filter(year >= 1991 & year <= 2020) %>%  
+  filter(year >= 1961 & year <= 1990) %>%  
   # exclude Feb 29th
   mutate(day_of_month = day(date)) %>%
   filter(!(month == "Feb" & day_of_month == 29)) %>%
@@ -99,6 +99,7 @@ month_breaks <- c(
 )
 names(month_breaks) <- month.abb
 
+# 254 / 217
 set.seed(4711)
 temp_current_smoothed %>% 
   right_join(temp_normal_smoothed, by = "day") %>% 
@@ -137,8 +138,8 @@ temp_current_smoothed %>%
     label.fontsize = 8, label.fill = alpha("white", 0.5)
   ) +
   annotate(
-    "text", x = 365, y = 3.5, label = "normal 1991-2020", hjust = 1,
-    family = "Roboto Condensed", size = 3, fontface = "bold"
+    "text", x = 365, y = 2, label = "normal 1961-1990", hjust = 1,
+    family = "Roboto Condensed", size = 3, fontface = "bold", angle = -30
   ) +
   scale_x_continuous(breaks = month_breaks, labels = month.abb, expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(5, 25, 5)) +
@@ -147,8 +148,8 @@ temp_current_smoothed %>%
   coord_cartesian(clip = "off") +
   guides(fill = "none") +
   labs(
-    title = "Mean temperature in Cologne, Germany 2022",
-    subtitle = "Station Cologne-Stammheim. Baseline: 1991-2020, smoothed values",
+    title = "Mean Temperature in Cologne, Germany 2022",
+    subtitle = "Station Cologne-Stammheim. Baseline: 1961-1990, smoothed values",
     caption = "Smoothed with lowess (bw=2/52). Data: DWD Open Data.
     Visualisation: Ansgar Wolsing (adapted from Dominic Royé)",
     x = NULL, y = "°C"
@@ -164,5 +165,5 @@ temp_current_smoothed %>%
     plot.title.position = "plot",
     plot.caption = element_markdown()
   )
-ggsave(here(base_path, "cgn.png"), width = 7, height = 5)
+ggsave(here(base_path, "cgn-ref-1961-1990.png"), width = 7, height = 5)
 
