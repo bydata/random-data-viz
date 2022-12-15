@@ -18,7 +18,7 @@ file <- dataDWD(link, dir = here(base_path, "data"), read = FALSE)
 file
 
 # Read the file from the zip folder:
-clim <- readDWD(file, varnames=TRUE) %>% bind_rows()
+clim <- readDWD(file, varnames = TRUE) %>% bind_rows()
 colnames(clim) <- tolower(colnames(clim))
 
 clim %>% 
@@ -165,5 +165,5 @@ temp_current_smoothed %>%
     plot.title.position = "plot",
     plot.caption = element_markdown()
   )
-ggsave(here(base_path, "cgn-ref-1961-1990.png"), width = 7, height = 5)
+ggsave(here(base_path, "cgn-ref-1961-1990-20221112.png"), width = 7, height = 5)
 
