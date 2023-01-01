@@ -140,3 +140,69 @@ p <- climate_data_recoded %>%
     axis.text.x.top = element_text(face = "bold")
   )
 ggsave(here(base_path, "temperaturen-silvester-2022-w-predictions.png"), width = 5, height = 4)
+
+
+
+p <- climate_data_recoded %>% 
+  filter(month == "Dec", mday(date) == 31) %>%
+  mutate(since_2001 = case_when(
+    year < 2001 ~ "Vor 2001",
+    year < 2022 ~ "Ab 2001",
+    year == 2022 ~ "2022"
+    ),
+    since_2001 = factor(since_2001, levels = c("Vor 2001", "Ab 2001", "2022"))) %>% 
+  ggplot(aes(location, txk.lufttemperatur_max)) +
+  ggbeeswarm::geom_quasirandom(
+    data = ~subset(., year < 2022),
+    aes(fill = since_2001, color = since_2001),
+    shape = 21, width = 0.25
+  ) +
+  geom_point(
+    data = ~subset(., year == 2022),
+    aes(fill = since_2001, col = since_2001),
+    size = 2, shape = 21, stroke = 1
+  ) +
+  ggrepel::geom_text_repel(
+    data = ~subset(., year == 2022 & location == "Berlin"),
+    aes(label = since_2001),
+    col = "#540D6E", size = 2.5, alpha = 0.9, hjust = 0, # nudge_x = 0.1,
+    min.segment.length = 0, segment.size = 0.33, family = "Roboto Condensed",
+    fontface = "bold"
+  ) +
+  scale_x_discrete(position = "top") +
+  scale_y_continuous(breaks = seq(-20, 20, 5)) +
+  scale_fill_manual(values = c(
+    "Vor 2001" = "grey72", "Ab 2001" ="grey40", "2022" = alpha("#540D6E", 0.2))) +
+  scale_color_manual(values = c("Vor 2001" = "white", "Ab 2001" = "white", "2022" = "#540D6E")) +
+  guides(
+    fill = guide_legend(override.aes = list(size = 3))
+  ) +
+  labs(
+    title = "Temperatur-Rekorde an Silvester 2022",
+    subtitle = "Historische Tageshöchsttemperaturen am 31.12.",
+    caption = "Wetterstationen: Berlin-Dahlem (FU) (seit 1950), 
+    Hamburg-Fuhlsbüttel (1936),
+    Köln-Stammheim (1945), München-Stadt (1954).
+    <br>
+    Historische Daten: Deutscher Wetterdienst, 
+    Vorhersage 2022: kachelmannwetter.com (31.12.2022 10:15 Uhr). 
+    Visualisierung: Ansgar Wolsing",
+    x = NULL,
+    y = "Höchsttemperatur",
+    fill = NULL,
+    color = NULL
+  ) +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 9) +
+  theme(
+    plot.background = element_rect(color = "white", fill = "white"),
+    legend.position = "bottom",
+    text = element_text(color = "grey36", lineheight = 1.1),
+    plot.title = element_text(color = "grey2", face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_markdown(margin = margin(t = 2, b = 8)),
+    plot.caption = element_markdown(hjust = 0, size = 6),
+    plot.caption.position = "plot",
+    panel.grid.major.x = element_blank(),
+    axis.text.x.top = element_text(face = "bold")
+  )
+ggsave(here(base_path, "temperaturen-silvester-2022-messdaten.png"), width = 5, height = 4)
