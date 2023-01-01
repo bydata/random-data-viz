@@ -82,6 +82,7 @@ predictions <- data.frame(location = c("Berlin", "Hamburg", "Köln", "München")
 
 p <- climate_data_recoded %>% 
   filter(month == "Dec", mday(date) == 31) %>% 
+  filter(year < 2022) %>% 
   mutate(since_2001 = ifelse(year >= 2001, "Ab 2001", "Vor 2001"),
          since_2001 = factor(since_2001, levels = c("Vor 2001", "Ab 2001", "Vorhersage 2022"))) %>% 
   ggplot(aes(location, txk.lufttemperatur_max)) +
