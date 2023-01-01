@@ -184,8 +184,7 @@ p <- climate_data_recoded %>%
     Hamburg-Fuhlsbüttel (1936),
     Köln-Stammheim (1945), München-Stadt (1954).
     <br>
-    Historische Daten: Deutscher Wetterdienst, 
-    Vorhersage 2022: kachelmannwetter.com (31.12.2022 10:15 Uhr). 
+    Daten: Deutscher Wetterdienst. 
     Visualisierung: Ansgar Wolsing",
     x = NULL,
     y = "Höchsttemperatur",
@@ -206,3 +205,7 @@ p <- climate_data_recoded %>%
     axis.text.x.top = element_text(face = "bold")
   )
 ggsave(here(base_path, "temperaturen-silvester-2022-messdaten.png"), width = 5, height = 4)
+
+
+climate_data_recoded %>% 
+  filter(month == "Dec", mday(date) == 31) %>% View()
