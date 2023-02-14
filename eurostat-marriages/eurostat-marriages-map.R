@@ -36,27 +36,6 @@ df_prep %>%
   filter(time >= 2019) %>% View()
 
 
-
-# NUTS shapefile =======================
-
-# shp <- st_read(here(base_path, "NUTS_RG_10M_2016_3035.shp", "NUTS_RG_10M_2016_3035.shp"))
-# crs <- st_crs(shp)
-# 
-# extent <- c(xmin = -24, xmax = 45, ymin = 30, ymax = 70)
-# 
-# shp_filtered <- shp %>% 
-#   st_transform(crs = "EPSG:4326") %>% 
-#   st_crop(extent) %>% 
-#   st_transform(crs)
-# 
-# df_prep %>% 
-#   distinct(country_code) %>% 
-#   anti_join(shp_filtered, by = c("country_code" = "CNTR_CODE"))
-# 
-# df_prep %>% 
-#   distinct(geo_code) %>% 
-#   anti_join(shp_filtered, by = c("geo_code" = "NUTS_ID"))
-
 countries <- giscoR::gisco_get_countries(
   region = "Europe", year = "2020", epsg = "3035", resolution = "10") %>% 
   bind_rows(
