@@ -30,12 +30,12 @@ df_long_centered_de <- df_long %>%
 
 # Custom theme
 theme_set(
-  theme_void(base_family = "Roboto Condensed", base_size = 9) +
-    theme(plot.background = element_rect(color = NA, fill = "black"),
+  theme_void(base_family = "Roboto Condensed", base_size = 8) +
+    theme(plot.background = element_rect(color = NA, fill = "grey2"),
           plot.margin = margin(t = 4, r = 4, l = 4, b = 4),
           plot.title = element_text(family = "Roboto Condensed Bold", hjust = 0.5,
-                                    color = "white", size = 12),
-          plot.subtitle = element_text(color = "grey82", hjust = 0.5)
+                                    color = "white", size = 10),
+          plot.subtitle = element_text(color = "grey70", hjust = 0.5)
     )
 )
 
@@ -45,7 +45,7 @@ df_long_centered_de %>%
   ggplot(aes(year, y = 1)) +
   geom_tile(aes(fill = avg_temp_centered), show.legend = FALSE) +
   scale_fill_gradientn(colors = col_strip)
-ggsave(here("climate-stripes", "climate-stripes-de.png"), dpi = 200, width = 6, height = 2)
+ggsave(here("climate-stripes", "climate-stripes-de-2022.png"), dpi = 200, width = 6, height = 2)
 
 
 ### ANIMATION ------------------------------------------------------------------
@@ -75,15 +75,21 @@ p <- bind_rows(df_long_centered_de, df_long_centered_de, .id = "state") %>%
   ggplot(aes(xmin = year - 0.5, xmax = year + 0.5)) +
   geom_rect(aes(ymin = ymin, ymax = ymax, fill = avg_temp_centered), 
             show.legend = FALSE) +
+  geom_text(
+    data = ~subset(., year %in% c(min(year), max(year))),
+    aes(year, y = 0, label = year,
+        hjust = ifelse(year == min(year), 1.15, -0.15)),
+    col = "grey70", family = "Roboto Condensed", size = 2
+  ) +
+  scale_x_continuous(expand = expansion(mult = 0.1)) +
   scale_fill_gradientn(colors = col_strip) +
   labs(
     title = "Climate Stripes Germany",
     subtitle = "#ShowYourStripes"
   )
-  #+  facet_wrap(vars(state))
-
+p
 p_anim <- p +
   transition_states(state)
-anim <- animate(p_anim, res = 200, width = 800, height = 600, units = "px", 
+anim <- animate(p_anim, res = 300, width = 800, height = 480, units = "px", 
                 end_pause = 10)
-anim_save(here("climate-stripes", "climate-stripes-de.gif"))
+anim_save(here("climate-stripes", "climate-stripes-de-2022.gif"))
