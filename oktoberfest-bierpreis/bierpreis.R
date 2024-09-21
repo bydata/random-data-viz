@@ -13,9 +13,9 @@ bierpreis_url <- "https://opendata.muenchen.de/dataset/8d6c8251-7956-4f92-8c96-f
 bier <- read_csv(bierpreis_url)
 
 
-#' Mittlerer Bierpreis 2022
+#' Mittlerer Bierpreis 2023
 #' Quelle: https://www.oktoberfest.de/informationen/service-fuer-besucher/der-bierpreis
-# Die Bierpreise 2022 der großen Zelte im Detail:
+# Die Bierpreise 2023 der großen Zelte im Detail:
 # Armbrustschützen-Festzelt: 14,40 Euro (2022: 13,50 Euro)
 # Augustiner-Festhalle: 13,50 Euro (2022: 12,80 Euro)
 # Bräurosl: 14,30 Euro (2022: 13,40 Euro)
