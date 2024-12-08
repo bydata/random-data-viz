@@ -16,7 +16,7 @@ table(metaIndex$var)
 
 # Select stations which have been active at least since min_date and are currently active
 min_date <- as_date("1961-01-01")
-active_stations_meta <- metaIndex %>%
+active_stations_meta <- metaIndex |>
   filter(von_datum <= min_date & var == "kl" & res == "monthly"
          & per == "recent" & hasfile)
 n_active_stations <- nrow(active_stations_meta)
@@ -66,21 +66,18 @@ dfs <- map(files_hist_and_recent, readDWD, varnames = TRUE)
 combine_historical_and_recent <- function(x) {
   df <- bind_rows(x)
   colnames(df) <- tolower(colnames(df))
-  df <- df %>%
+  df <- df |>
     transmute(
       stations_id,
       date = lubridate::as_date(as.character(mess_datum)),
       year = year(date),
       decade = (year - 1) %/% 10 * 10,
       shk_tag.schneehoehe
-    ) %>%
-    # na.omit() %>%
-    filter(month(date) == 12 & mday(date) %in% 24:26) %>% 
+    ) |>
+    filter(month(date) == 12 & mday(date) %in% 24:26) |> 
     # there is a certain overlap between the two data sources,
     # remove those duplicates
-    group_by(date) %>%
-    slice_head(n = 1) %>%
-    ungroup() 
+    distinct()
   df
 }
 
@@ -92,18 +89,18 @@ write_rds(dfs_combined, here(base_path, "output", "dwd-stations-pre.rds"))
 
 # Add metadata to weather data
 add_station_metadata <- function(x, metadata = active_stations_meta) {
-  x %>%
-    inner_join(metadata, by = join_by(stations_id == Stations_id)) %>%
+  x |>
+    inner_join(metadata, by = join_by(stations_id == Stations_id)) |>
     select(-c(res, var, per, hasfile))
 }
 
 dfs_prep <- map(dfs_combined, add_station_metadata, .progress = TRUE)
 glimpse(dfs_prep[[1]])
 
-df_snow_xmas <- dfs_prep %>% 
-  bind_rows(.id = "stations_name") %>% 
-  filter(year >= 1961) %>% 
-  group_by(stations_name, stations_id, decade, year, geoBreite, geoLaenge) %>% 
+df_snow_xmas <- dfs_prep |> 
+  bind_rows(.id = "stations_name") |> 
+  filter(year >= 1961) |> 
+  group_by(stations_name, stations_id, decade, year, geoBreite, geoLaenge) |> 
   summarize(
     snow_xmas_max = max(shk_tag.schneehoehe),
     has_snow_xmas = snow_xmas_max > 0,
@@ -112,8 +109,8 @@ df_snow_xmas <- dfs_prep %>%
 
 shp <- giscoR::gisco_get_countries(country = "Germany", resolution = "60")
 
-df_snow_xmas %>% 
-  filter(has_snow_xmas) %>% 
+df_snow_xmas |> 
+  filter(has_snow_xmas) |> 
   ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max)) +
   geom_sf(
     data = shp,
@@ -131,10 +128,10 @@ df_snow_xmas %>%
 
 darkgreen_to_white_pal <- colorRampPalette(c("#718373", "white"))
 
-p <- df_snow_xmas %>% 
-  filter(has_snow_xmas) %>% 
-  # exclude 2023
-  filter(year < 2023) %>% 
+p <- df_snow_xmas |> 
+  filter(has_snow_xmas) |> 
+  # exclude 2024
+  filter(year < 2024) |> 
   mutate(
     snow_xmas_max_grp = case_when(
       snow_xmas_max <= 5 ~ "0.1-5 cm",
@@ -146,14 +143,14 @@ p <- df_snow_xmas %>%
     snow_xmas_max_grp = factor(
       snow_xmas_max_grp,
       levels = c("0.1-5 cm", "6-10 cm",  "11-30 cm", "31-50 cm", "> 50 cm"))
-  ) %>% 
+  ) |> 
   ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max_grp)) +
   geom_sf(
     data = shp,
     fill = "#1D3A20", color = "#1D3A20", inherit.aes = FALSE
   ) +
   geom_point(
-    shape = 21, color = "grey90", stroke = 0.1, size = 0.8
+    shape = 21, color = "grey20", stroke = 0.1, size = 0.8
   ) +
   scale_fill_manual(values = darkgreen_to_white_pal(5)) +
   facet_wrap(vars(year), ncol = 10) +
@@ -197,44 +194,6 @@ p <- df_snow_xmas %>%
     legend.text = element_text(hjust = 0.5),
     legend.text.align = 0.5
   )
-ggsave(here(base_path, "plots", "snow-xmas-de-de.png"), 
+ggsave(here(base_path, "plots", "snow-xmas-de-1961-2024.png"), 
        dpi = 500, width = 4.25, height = 5.25, 
        scale = 1.2)
-
-
-
-stations_names_to_show <- c(
-  "Berlin-Dahlem (FU)", "Koeln/Bonn", "Muenchen-Stadt", "Hamburg-Fuhlsbuettel",
-  "Stuttgart-Echterdingen", "Frankfurt/Main")
-
-df_snow_xmas %>% 
-  filter(stations_name %in% stations_names_to_show, decade <= 2010) %>% 
-  count(decade, wt = has_snow_xmas, name = "n_xmas_snow") %>% 
-  ggplot(aes(decade, n_xmas_snow)) +
-  geom_col(
-    aes(y = 1), fill = "grey60"
-  ) +
-  geom_col() +
-  facet_wrap(vars(stations_name))
-
-df_snow_xmas %>% 
-  filter(stations_name %in% stations_names_to_show, decade <= 2010) %>% 
-  count(decade, wt = has_snow_xmas_5cm, name = "n_xmas_snow") %>% 
-  ggplot(aes(decade, n_xmas_snow)) +
-  geom_col(
-    aes(y = 1), fill = "grey60"
-  ) +
-  geom_col() +
-  facet_wrap(vars(stations_name))
-
-
-
-df_snow_xmas %>% 
-  filter(stations_name %in% stations_names_to_show, decade <= 2010) %>% 
-  group_by(stations_name, decade) %>% 
-  summarize(avg_snow_xmas = mean(snow_xmas_total)) %>% 
-  ggplot(aes(decade, avg_snow_xmas)) +
-  geom_col() +
-  facet_wrap(vars(stations_name))
-
-
