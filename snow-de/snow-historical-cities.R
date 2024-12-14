@@ -1,4 +1,5 @@
 library(tidyverse)
+library(ggtext)
 library(here)
 #' https://github.com/brry/rdwd
 rdwd::updateRdwd()
@@ -76,6 +77,8 @@ df_cities_snow <- dfs |>
   pull()
   )
 
+first_year_overall <- 1981
+
 df_cities_snow_summary <- 
   df_cities_snow |> 
   filter(year >= first_year_overall) |> 
@@ -101,7 +104,10 @@ df_cities_snow_summary
 
 # Function to create a fractal snowflake branch
 create_fractal_branch <- function(base_x, base_y, angle, depth, length, scale = 0.6) {
-  if (depth == 0) return(data.frame(x = base_x, y = base_y, xend = base_x + length * cos(angle), yend = base_y + length * sin(angle)))
+  if (depth == 0) return(
+    data.frame(x = base_x, y = base_y, xend = base_x + length * cos(angle), 
+               yend = base_y + length * sin(angle))
+    )
   
   x_end <- base_x + length * cos(angle)
   y_end <- base_y + length * sin(angle)
@@ -110,8 +116,10 @@ create_fractal_branch <- function(base_x, base_y, angle, depth, length, scale = 
   main_branch <- data.frame(x = base_x, y = base_y, xend = x_end, yend = y_end)
   
   # Sub-branches
-  left_branch <- create_fractal_branch(x_end, y_end, angle + pi / 6, depth - 1, length * scale)
-  right_branch <- create_fractal_branch(x_end, y_end, angle - pi / 6, depth - 1, length * scale)
+  left_branch <- create_fractal_branch(
+    x_end, y_end, angle + pi / 6, depth - 1, length * scale)
+  right_branch <- create_fractal_branch(
+    x_end, y_end, angle - pi / 6, depth - 1, length * scale)
   
   rbind(main_branch, left_branch, right_branch)
 }
@@ -138,6 +146,40 @@ snowflake_data <- create_snowflake(n_branches = 8, depth = 4, length = 1)
 snowflake_data <- normalize_snowflake(snowflake_data)
 
 
+#' In order to correctly fill the circle so that the area of the circle matches
+#' the share
+calculate_segment_height_from_share <- function(share) {
+  
+  if (any(share < 0 | share > 1)) {
+    stop("Share values must be between 0 and 1.")
+  }
+  
+  radius <- 0.5 
+  
+  # Compute the area of a circular segment given the height
+  segment_area_function <- function(h) {
+    theta <- 2 * acos(1 - h / radius)  # central angle in radians
+    area_sector <- (theta / (2 * pi)) * (pi * radius^2)  # area of the sector
+    area_triangle <- (radius^2) * sin(theta) / 2  # area of the triangle
+    area_sector - area_triangle  # area of the segment
+  }
+  
+  calculate_height <- function(segment_area) {
+    if (segment_area == 0) return(0)
+    if (segment_area == (pi / 4)) return(radius)
+    if (segment_area == (pi / 2)) return(2 * radius)
+    
+    find_height <- function(h) segment_area_function(h) - segment_area
+    uniroot(find_height, c(0, 2 * radius), tol = 1e-6)$root
+  }
+  
+  # Compute segment areas and corresponding heights
+  segment_areas <- share * (pi / 4)
+  heights <- map_dbl(segment_areas, calculate_height)
+  
+  heights
+}
+
 
 # Plot the snowflake
 bg_color <- "#040b29"
@@ -150,22 +192,30 @@ df_cities_snow_summary |>
     aes(x = x, y = y, xend = xend, yend = yend),
     color = main_color, linewidth = 0.4, lineend = "round") +
   geom_rect(
-    data = ,
-    aes(xmin = -Inf, xmax = Inf, ymin = share_years_snow, ymax = Inf),
+    aes(xmin = -Inf, xmax = Inf, 
+        ymin = calculate_segment_height_from_share(share_years_snow), 
+        ymax = Inf),
     fill = alpha(bg_color, 0.8)
   ) +
-  geom_label(
+  geom_richtext(
     aes(x = 0.5, y = 0.7, 
-        label = scales::percent(share_years_snow, accuracy = 0.1)),
-    color = main_color, fill = NA, family = "Cabinet Grotesk", fontface = "bold",
-    label.size = 0, size = 4.5
+        label = sprintf(
+          "<b style='font-size: 20px'>%s</b><br>(zuletzt %d)",
+          scales::percent(share_years_snow, accuracy = 1),
+          last_year_snow
+        )
+      ),
+    color = main_color, fill = NA, family = "Cabinet Grotesk",
+    label.size = 0, size = 2.5
   ) +
   coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
   facet_wrap(vars(city), strip.position = "bottom") +
   labs(
     title = "Weiße Weihnachten?",
-    subtitle = "Anteil der Jahre, an denen zwischen dem 24. und 26.12. Schnee fiel",
-    caption = "Daten: DWD Offene Daten. Visualisierung: Ansgar Wolsing"
+    subtitle = "Anteil der Jahre, an denen zwischen dem 24. und 26.12.<br>
+    an mindestens einem Tag Schnee fiel",
+    caption = "**Hinweis:** Mindestens 1 cm Schneehöhe an einem der drei Tage.
+    **Daten:** DWD Offene Daten. **Visualisierung:** Ansgar Wolsing"
   ) +
   theme_void(base_family = "Cabinet Grotesk") +
   theme(
@@ -176,12 +226,12 @@ df_cities_snow_summary |>
     text = element_text(color = main_color),
     plot.title = element_text(
       family = "Cabinet Grotesk SemiBold", size = 24, hjust = 0.5),
-    plot.subtitle = element_text(
-      hjust = 0.5, margin = margin(t = 6, b = 8)),
-    plot.caption = element_text(hjust = 0.5, size = 6),
-    plot.margin = margin(rep(4, 4)),
-    panel.spacing.x = unit(5, "mm"),
-    panel.spacing.y = unit(8, "mm")
+    plot.subtitle = element_markdown(
+      hjust = 0.5, lineheight = 1.1, margin = margin(t = 6, b = 12)),
+    plot.caption = element_markdown(
+      hjust = 0.5, size = 6, lineheight = 1.2, margin = margin(t = 10)),
+    plot.margin = margin(t = 0, l = 4, r = 4, b = 4),
+    panel.spacing.x = unit(6, "mm"),
+    panel.spacing.y = unit(7, "mm")
   )
 ggsave(here(base_path, "plots", "snow-cities-historical.png"), width = 5, height = 5)
-       
