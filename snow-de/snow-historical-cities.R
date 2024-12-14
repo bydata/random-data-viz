@@ -96,7 +96,8 @@ df_cities_snow_summary <-
     n_years_snow = sum(snow_1cm),
     share_years_snow = n_years_snow / n_years,
     last_year_snow = max(last_year_snow)
-  )
+  ) |> 
+  mutate(city = fct_reorder(city, -share_years_snow))
 df_cities_snow_summary
 
 
@@ -212,15 +213,15 @@ df_cities_snow_summary |>
   facet_wrap(vars(city), strip.position = "bottom") +
   labs(
     title = "Weiße Weihnachten?",
-    subtitle = "Anteil der Jahre, an denen zwischen dem 24. und 26.12.<br>
-    an mindestens einem Tag Schnee fiel",
+    subtitle = sprintf("Anteil der Jahre seit %d, an denen zwischen dem 
+    24. und 26.12.<br> an mindestens einem Tag Schnee fiel", first_year_overall),
     caption = "**Hinweis:** Mindestens 1 cm Schneehöhe an einem der drei Tage.
     **Daten:** DWD Offene Daten. **Visualisierung:** Ansgar Wolsing"
   ) +
   theme_void(base_family = "Cabinet Grotesk") +
   theme(
-    panel.background = element_rect(fill = bg_color),
-    plot.background = element_rect(fill = bg_color),
+    plot.background = element_rect(color = bg_color, fill = bg_color),
+    panel.background = element_rect(color = "transparent", fill = bg_color),
     strip.text = element_text(face = "bold", size = 12),
     strip.clip = "off",
     text = element_text(color = main_color),
@@ -229,8 +230,8 @@ df_cities_snow_summary |>
     plot.subtitle = element_markdown(
       hjust = 0.5, lineheight = 1.1, margin = margin(t = 6, b = 12)),
     plot.caption = element_markdown(
-      hjust = 0.5, size = 6, lineheight = 1.2, margin = margin(t = 10)),
-    plot.margin = margin(t = 0, l = 4, r = 4, b = 4),
+      hjust = 0.5, size = 6, lineheight = 1.2, margin = margin(t = 15)),
+    plot.margin = margin(t = 0, l = 4, r = 4, b = 0),
     panel.spacing.x = unit(6, "mm"),
     panel.spacing.y = unit(7, "mm")
   )
