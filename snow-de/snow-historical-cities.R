@@ -254,11 +254,12 @@ df_cities_snow_summary |>
       hjust = 0.5, lineheight = 1.1, margin = margin(t = 6, b = 12)),
     plot.caption = element_markdown(
       hjust = 0.5, size = 6, lineheight = 1.2, margin = margin(t = 15)),
-    plot.margin = margin(t = 0, l = 4, r = 4, b = 0),
+    plot.margin = margin(t = 0, l = 4, r = 4, b = 1),
     panel.spacing.x = unit(6, "mm"),
     panel.spacing.y = unit(7, "mm")
   )
-ggsave(here(base_path, "plots", "snow-cities-historical.png"), width = 5, height = 5)
+ggsave(here(base_path, "plots", "snow-cities-historical.png"), 
+       width = 5, height = 5)
 
 
 # Bar chart
@@ -313,4 +314,5 @@ df_cities_snow_summary |>
     panel.spacing.x = unit(6, "mm"),
     panel.spacing.y = unit(7, "mm")
   )
-ggsave(here(base_path, "plots", "snow-cities-historical-barchart.png"), width = 5, height = 5)
+ggsave(here(base_path, "plots", "snow-cities-historical-barchart.png"), 
+       width = 5, height = 5)
