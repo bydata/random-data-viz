@@ -27,11 +27,12 @@ replace_umlauts <- function(x) {
 
 biggest_cities_fmt <- replace_umlauts(biggest_cities)
 names(biggest_cities) <- biggest_cities_fmt
-biggest_cities_regex <- paste(biggest_cities_fmt, collapse = "|")
+biggest_cities_regex <- sprintf("^(%s)", paste(biggest_cities_fmt, collapse = "|"))
 
 df_stations <- metaIndex |> 
   filter(res == "daily", var == "more_precip", hasfile) |> 
   filter(str_detect(Stationsname, biggest_cities_regex)) |> 
+  filter(Stationsname != "Berlinchen") |> 
   mutate(
     city = str_extract(Stationsname, biggest_cities_regex),
     city = biggest_cities[city]) |> 
