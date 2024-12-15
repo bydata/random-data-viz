@@ -14,7 +14,7 @@ base_path <- "snow-de"
 data(metaIndex)
 glimpse(metaIndex)
 
-biggest_cities <- c("Berlin", "Hamburg", "München", "Köln", "Frankfurt",
+biggest_cities <- c("Berlin", "Hamburg", "München", "Köln", "Frankfurt/M",
                      "Stuttgart")
 
 # Replace umlauts with ".e"
@@ -72,10 +72,12 @@ df_cities_snow <- dfs |>
   mutate(
     snow_cm = replace_na(snow_cm, 0),
     snow_1cm = snow_cm >= 1,
+    snow_2cm = snow_cm >= 2,
     snow_5cm = snow_cm >= 5) |> 
   group_by(city, year) |>
   summarize(
     snow_1cm = max(snow_1cm) == 1,
+    snow_2cm = max(snow_2cm) == 1,
     snow_5cm = max(snow_5cm) == 1, 
     .groups = "drop")
 
@@ -87,7 +89,7 @@ df_cities_snow <- dfs |>
   pull()
   )
 
-first_year_overall <- 1981
+first_year_overall <- 1991
 
 df_cities_snow_summary <- 
   df_cities_snow |> 
@@ -96,14 +98,14 @@ df_cities_snow_summary <-
   mutate(
     last_year_snow = map_int(
       data, 
-      function(x) filter(x, snow_1cm) |> 
+      function(x) filter(x, snow_2cm) |> 
         summarize(max(year)) |> 
         pull())) |> 
   unnest(data) |> 
   group_by(city) |> 
   summarize(
     n_years = n(),
-    n_years_snow = sum(snow_1cm),
+    n_years_snow = sum(snow_2cm),
     share_years_snow = n_years_snow / n_years,
     last_year_snow = max(last_year_snow)
   ) |> 
@@ -199,6 +201,15 @@ calculate_segment_height_from_share <- function(share) {
 bg_color <- "#040b29"
 main_color <- "skyblue"
 
+plot_titles <- list(
+  title = "Weiße Weihnachten?",
+  subtitle = sprintf("Anteil der Jahre seit %d mit einer Schneehöhe von 
+    mindestens 2 cm<br>
+    an mindestens einem Tag zwischen dem 24. und 26.12.", first_year_overall),
+  caption = "**Hinweis:** Mindestens 2 cm Schneehöhe an einem der drei Tage.
+    **Daten:** DWD Offene Daten. **Visualisierung:** Ansgar Wolsing"
+)
+
 df_cities_snow_summary |> 
   ggplot() +
   geom_segment(
@@ -225,11 +236,9 @@ df_cities_snow_summary |>
   coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
   facet_wrap(vars(city), strip.position = "bottom") +
   labs(
-    title = "Weiße Weihnachten?",
-    subtitle = sprintf("Anteil der Jahre seit %d, an denen zwischen dem 
-    24. und 26.12.<br> an mindestens einem Tag Schnee fiel", first_year_overall),
-    caption = "**Hinweis:** Mindestens 1 cm Schneehöhe an einem der drei Tage.
-    **Daten:** DWD Offene Daten. **Visualisierung:** Ansgar Wolsing"
+    title = plot_titles$title,
+    subtitle = plot_titles$subtitle,
+    caption = plot_titles$caption
   ) +
   theme_void(base_family = "Cabinet Grotesk") +
   theme(
@@ -249,3 +258,58 @@ df_cities_snow_summary |>
     panel.spacing.y = unit(7, "mm")
   )
 ggsave(here(base_path, "plots", "snow-cities-historical.png"), width = 5, height = 5)
+
+
+# Bar chart
+df_cities_snow_summary |> 
+  ggplot() +
+  geom_col(
+    aes(city, 1),
+    fill = NA, color = main_color, width = 0.8
+  ) +
+  geom_col(
+    aes(city, share_years_snow),
+    fill = main_color, width = 0.8
+  ) +
+  geom_richtext(
+    aes(city, 1, 
+        label = sprintf(
+          "<b style='font-size: 20px'>%s</b><br>(zuletzt %d)",
+          scales::percent(share_years_snow, accuracy = 1),
+          last_year_snow
+        )
+    ),
+    color = main_color, fill = NA, family = "Cabinet Grotesk", 
+    label.size = 0, size = 2.5, vjust = 1, nudge_y = -0.02
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  coord_cartesian(clip = "off") +
+  labs(
+    title = plot_titles$title,
+    subtitle = plot_titles$subtitle,
+    caption = plot_titles$caption
+  ) +
+  theme_minimal(base_family = "Cabinet Grotesk") +
+  theme(
+    plot.background = element_rect(color = bg_color, fill = bg_color),
+    panel.background = element_rect(color = "transparent", fill = bg_color),
+    panel.grid = element_blank(),
+    axis.text.y = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
+    strip.clip = "off",
+    text = element_text(color = main_color),
+    axis.title = element_blank(),
+    axis.text = element_text(color = main_color),
+    axis.text.x = element_text(
+      size = 10, family = "Cabinet Grotesk", face = "bold"),
+    plot.title = element_text(
+      family = "Cabinet Grotesk SemiBold", size = 24, hjust = 0.5),
+    plot.subtitle = element_markdown(
+      hjust = 0.5, lineheight = 1.1, margin = margin(t = 6, b = 2)),
+    plot.caption = element_markdown(
+      hjust = 0.5, size = 6, lineheight = 1.2, margin = margin(t = 15)),
+    plot.margin = margin(rep(4, 4)),
+    panel.spacing.x = unit(6, "mm"),
+    panel.spacing.y = unit(7, "mm")
+  )
+ggsave(here(base_path, "plots", "snow-cities-historical-barchart.png"), width = 5, height = 5)
