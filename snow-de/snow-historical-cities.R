@@ -14,16 +14,27 @@ base_path <- "snow-de"
 data(metaIndex)
 glimpse(metaIndex)
 
-# min_date <- as_date("1961-01-01")
-# max_date <- as_date("2023-12-26")
-biggest_cities <- c("Berlin", "Hamburg", "Muenchen", "Koeln", "Frankfurt",
+biggest_cities <- c("Berlin", "Hamburg", "München", "Köln", "Frankfurt",
                      "Stuttgart")
-biggest_cities_regex <- paste(biggest_cities, collapse = "|")
+
+# Replace umlauts with ".e"
+replace_umlauts <- function(x) {
+  x |> 
+    str_replace_all("ä", "ae") |> 
+    str_replace_all("ö", "oe") |> 
+    str_replace_all("ü", "ue")
+}
+
+biggest_cities_fmt <- replace_umlauts(biggest_cities)
+names(biggest_cities) <- biggest_cities_fmt
+biggest_cities_regex <- paste(biggest_cities_fmt, collapse = "|")
 
 df_stations <- metaIndex |> 
   filter(res == "daily", var == "more_precip", hasfile) |> 
   filter(str_detect(Stationsname, biggest_cities_regex)) |> 
-  mutate(city = str_extract(Stationsname, biggest_cities_regex)) |> 
+  mutate(
+    city = str_extract(Stationsname, biggest_cities_regex),
+    city = biggest_cities[city]) |> 
   distinct(Stations_id, city, Stationsname, von_datum, bis_datum) |> 
   arrange(city, von_datum, bis_datum)
 
@@ -58,7 +69,6 @@ df_cities_snow <- dfs |>
   distinct(city, year, stations_name = Stationsname, stations_id, 
            mess_datum, sh_tag_schneehoehe) |>
   rename(snow_cm = sh_tag_schneehoehe) |> 
-  # filter(!is.na(snow_cm)) |> 
   mutate(
     snow_cm = replace_na(snow_cm, 0),
     snow_1cm = snow_cm >= 1,
@@ -147,6 +157,8 @@ snowflake_data <- create_snowflake(n_branches = 8, depth = 4, length = 1)
 snowflake_data <- normalize_snowflake(snowflake_data)
 
 
+## Circular segment calculations -----------------------------------------------
+
 #' In order to correctly fill the circle so that the area of the circle matches
 #' the share
 calculate_segment_height_from_share <- function(share) {
@@ -182,7 +194,8 @@ calculate_segment_height_from_share <- function(share) {
 }
 
 
-# Plot the snowflake
+## Plot ------------------------------------------------------------------------
+
 bg_color <- "#040b29"
 main_color <- "skyblue"
 
