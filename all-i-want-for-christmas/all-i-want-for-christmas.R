@@ -119,73 +119,92 @@ df_radio_hot100_mariah <- df_hot100_mariah |>
 
 
 # Annotations
-
 annotation_labels <- c(
   rep("The song was never released as a physical single,
     making it not eligible for the Hot 100 before 1998.<br>
-  It peaked at no. 12 in the <b style='color: #17331b'>Radio Hot 100</b> in 1995.", 2),
-  rep("In January 2000, it entered the <b style='color: #eb4034'>Billboard Hot 100</b> 
+  It peaked at no. 12 in the <b>Radio Hot 100</b> in 1995.", 2),
+  rep("In January 2000, it entered the <b style='color: gold'>Billboard Hot 100</b> 
   for the 1st time, at no. 83", 2),
   rep("The song was unable to attain a new peak on the Billboard Hot 100 chart
       because it was considered a recurrent single and was thus ineligible for
       chart re-entry.", 2),
   rep("Since its re-entry in 2012, the song has been in the Hot 100 every year.", 2),
-  "In 2019, the song has topped the Billboard Hot 100 every winter season."
+  "Since 2019, the song has topped the <b style='color: gold'>Billboard Hot 100</b>
+  every Christmas season."
 )
 
 df_annotations <- data.frame(
-  year = c(min(df_radio_hot100_mariah$year), rep(2000, 2), rep(2004, 2), 
+  year = c(1995, rep(2000, 2), rep(2004, 2), 
            rep(2012, 2), rep(2019, 2)),
   # use a separate variable for x so that the original annotation does not move
   # with the animation
-  x = c(rep(1996, 2), rep(2000, 2), rep(2004, 2), rep(2012, 2), 2015),
-  y = c(1, 1, 83, 83, 60, 60, 45, 45, 30),
+  x = c(rep(1996, 2), rep(2000, 2), rep(2002, 2), rep(2012, 2), 2013),
+  y = c(1, 1, 83, 83, 31, 31, 45, 45, 33),
   label = annotation_labels
 )
 
-p_anim <- df_radio_hot100_mariah |> 
+bg_gradient <- grid::linearGradient(
+  c("#e36d7b", "#de3549", "#eb4034"), stops = c(0, 0.1, 1),
+  y1 = unit(1, "npc"), y2 = unit(0, "npc"))
+
+p <-  df_radio_hot100_mariah |> 
   ggplot(aes(year, peak_position, color = type, group = streak_id)) +
-  geom_line(linewidth = 0.9) +
+  geom_line(
+    aes(linetype = type, linewidth = type),
+    lineend = "round") +
   geom_point(size = 1.5) +
   geom_textbox(
     data = df_annotations,
     aes(x, y, label = label),
     inherit.aes = FALSE, hjust = 0, vjust = 1, maxwidth = unit(0.5, "npc"),
-    size = 2.5, family = "Fira Sans", box.size = 0, fill = NA
+    size = 3.5, family = "Fira Sans", box.size = 0, fill = "#ffffff33",
+    color = "white"
   ) +
+  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
   scale_y_reverse(
     breaks = c(1, seq(10, 100, 10)),
     limits = c(100, 1), expand = expansion(add = c(1, 0.5))) +
-  scale_color_manual(values = c("#eb4034", "gold", "#17331b")) +
+  scale_color_manual(values = c("gold", "#ffffffdd", "#ffffffdd")) +
+  scale_linetype_manual(values = c("solid", "dotted", "dashed")) +
+  scale_linewidth_manual(values = c(1.2, 0.7, 0.7)) +
   coord_cartesian(clip = "off") +
   labs(
-    title = "...",
+    title = "All I Want For Christmas Is A Number 1 Single",
+    subtitle = "How streaming and changed rules for eligibility have enabled
+    the incredible chart run by <i>All I Want For Christmas Is You</i>.",
     caption = "Source: Billboard (via User ludmin on Kaggle). 
     Visualization: Ansgar Wolsing",
     x = NULL,
     y = "Peak position per year",
     color = NULL
   ) +
-  theme_minimal(base_family = "Fira Sans", base_size = 9) +
+  theme_minimal(base_family = "Fira Sans", base_size = 11) +
   theme(
-    plot.background = element_rect(color = "#f1f1e9", fill = "#f1f1e9"),
+    plot.background = element_rect(color = bg_gradient, fill = bg_gradient),
     panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_line(linewidth = 0.1),
     panel.grid.minor = element_blank(),
     plot.margin = margin(rep(4, 4)),
     legend.position = "top",
+    text = element_text(color = "white"),
+    axis.text = element_text(color = "white"),
     plot.title = element_markdown(size = 13, family = "Fira Sans SemiBold"),
     plot.title.position = "plot",
+    plot.subtitle = element_textbox(width = 0.95, lineheight = 1.3),
     plot.caption = element_markdown(size = 6)
-  ) +
+  )
+p
+
+p_anim <- p +
   transition_reveal(year) +
   ease_aes("cubic-in-out")
 animate(p_anim, 
-        end_pause = 20,
+        end_pause = 20, nframes = 200,
         width = 1200, height = 1200, res = 200, bg = "#f1f1e9")
 anim_save(here(base_path, "all-i-want-for-xmas.gif"))
 
 animate(p_anim, 
-        end_pause = 20,
+        end_pause = 20, nframes = 200,
         width = 1200, height = 1200, res = 200, bg = "#f1f1e9",
         renderer = ffmpeg_renderer(format = "mp4"))
 anim_save(here(base_path, "all-i-want-for-xmas.mp4"))
