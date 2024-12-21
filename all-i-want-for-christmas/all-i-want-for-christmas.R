@@ -125,11 +125,12 @@ annotation_labels <- c(
   It peaked at no. 12 in the <b>Radio Hot 100</b> in 1995.", 2),
   rep("In January 2000, it entered the <b style='color: gold'>Billboard Hot 100</b> 
   for the 1st time, at no. 83", 2),
-  rep("The song was unable to attain a new peak on the Billboard Hot 100 chart
-      because it was considered a recurrent single and was thus ineligible for
-      chart re-entry.", 2),
-  rep("Since its re-entry in 2012, the song has been in the Hot 100 every year.", 2),
-  "Since 2019, the song has topped the <b style='color: gold'>Billboard Hot 100</b>
+  rep("The song was considered a *recurrent single* and was thus ineligible for
+    re-entry on the Billboard Hot 100.<br><br>
+      **Digital Sales** showed its popularity, though.", 2),
+  rep("Since its re-entry in 2012, the song has been in the 
+      <b style='color: gold'>Billboard Hot 100</b> every year.", 2),
+  "*Since 2019**, the song has topped the <b style='color: gold'>Billboard Hot 100</b>
   every Christmas season."
 )
 
@@ -147,12 +148,12 @@ bg_gradient <- grid::linearGradient(
   c("#e36d7b", "#de3549", "#eb4034"), stops = c(0, 0.1, 1),
   y1 = unit(1, "npc"), y2 = unit(0, "npc"))
 
-p <-  df_radio_hot100_mariah |> 
+p <- df_radio_hot100_mariah |> 
   ggplot(aes(year, peak_position, color = type, group = streak_id)) +
   geom_line(
     aes(linetype = type, linewidth = type),
     lineend = "round") +
-  geom_point(size = 1.5) +
+  geom_point(size = 1.5, show.legend = FALSE) +
   geom_textbox(
     data = df_annotations,
     aes(x, y, label = label),
@@ -164,9 +165,18 @@ p <-  df_radio_hot100_mariah |>
   scale_y_reverse(
     breaks = c(1, seq(10, 100, 10)),
     limits = c(100, 1), expand = expansion(add = c(1, 0.5))) +
-  scale_color_manual(values = c("gold", "#ffffffdd", "#ffffffdd")) +
-  scale_linetype_manual(values = c("solid", "dotted", "dashed")) +
-  scale_linewidth_manual(values = c(1.2, 0.7, 0.7)) +
+  scale_color_manual(values = c(
+    "Billboard Hot 100" = "gold", 
+    "Hot Digital Songs" = "#ffffffaa", 
+    "Radio Hot 100" = "#ffffffaa")) +
+  scale_linetype_manual(values = c(
+    "Billboard Hot 100" = "solid",
+    "Hot Digital Songs" = "dotted", 
+    "Radio Hot 100" = "dashed")) +
+  scale_linewidth_manual(values = c(
+    "Billboard Hot 100" = 1.2, 
+    "Hot Digital Songs" = 0.7,
+    "Radio Hot 100" = 0.7)) +
   coord_cartesian(clip = "off") +
   labs(
     title = "All I Want For Christmas Is A Number 1 Single",
@@ -176,7 +186,7 @@ p <-  df_radio_hot100_mariah |>
     Visualization: Ansgar Wolsing",
     x = NULL,
     y = "Peak position per year",
-    color = NULL
+    color = NULL, linetype = NULL, linewidth = NULL
   ) +
   theme_minimal(base_family = "Fira Sans", base_size = 11) +
   theme(
@@ -191,20 +201,24 @@ p <-  df_radio_hot100_mariah |>
     plot.title = element_markdown(size = 13, family = "Fira Sans SemiBold"),
     plot.title.position = "plot",
     plot.subtitle = element_textbox(width = 0.95, lineheight = 1.3),
-    plot.caption = element_markdown(size = 6)
+    plot.caption = element_markdown(size = 6),
+    legend.key.width = unit(8, "mm")
   )
 p
 
 p_anim <- p +
   transition_reveal(year) +
   ease_aes("cubic-in-out")
+
+# Create a GIF
 animate(p_anim, 
         end_pause = 20, nframes = 200,
-        width = 1200, height = 1200, res = 200, bg = "#f1f1e9")
+        width = 1200, height = 1200, res = 200)
 anim_save(here(base_path, "all-i-want-for-xmas.gif"))
 
+# Create an mp4
 animate(p_anim, 
         end_pause = 20, nframes = 200,
-        width = 1200, height = 1200, res = 200, bg = "#f1f1e9",
+        width = 1200, height = 1200, res = 200,
         renderer = ffmpeg_renderer(format = "mp4"))
 anim_save(here(base_path, "all-i-want-for-xmas.mp4"))
