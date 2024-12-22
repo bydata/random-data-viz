@@ -17,7 +17,7 @@ table(metaIndex$var)
 # Select stations which have been active at least since min_date and are currently active
 min_date <- as_date("1961-01-01")
 active_stations_meta <- metaIndex |>
-  filter(von_datum <= min_date & var == "kl" & res == "monthly"
+  filter(von_datum <= min_date & var == "kl" & res == "daily"
          & per == "recent" & hasfile)
 n_active_stations <- nrow(active_stations_meta)
 
@@ -107,93 +107,103 @@ df_snow_xmas <- dfs_prep |>
     has_snow_xmas_5cm = snow_xmas_max >= 5
   ) 
 
+# Shapefile Germany
 shp <- giscoR::gisco_get_countries(country = "Germany", resolution = "60")
 
-df_snow_xmas |> 
-  filter(has_snow_xmas) |> 
-  ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max)) +
-  geom_sf(
-    data = shp,
-    fill = "grey92", color = "grey92", inherit.aes = FALSE
-  ) +
-  geom_point(
-    shape = 21, color = "grey20", stroke = 0.1
-  ) +
-  scale_fill_gradient(
-    low = "white", high = "blue", trans = "pseudo_log",
-    breaks = c(3, 10, 30, 100, 300, 1000)) + 
-  facet_wrap(vars(year), ncol = 10) +
-  theme_void()
+# Plot titles in German and English
+plot_titles <- list(
+  "de" = list(
+    "title" = "Schnee an Weihnachten",
+    "subtitle" = "Maximale Schneehöhe vom 24.12. bis 26.12. pro Jahr
+    an 268 Wetterstationen (Stationen konstant über Zeit)",
+    "caption" = "<span style='font-family:Outfit Semibold'>Daten:</span> DWD Offene Daten.
+    <span style='font-family:Outfit Semibold'>Visualisierung:</span> Ansgar Wolsing"
+  ),
+  "en" = list(
+    "title" = "Dreaming of a White Christmas",
+    "subtitle" = "Combined snow depth from December 24 to December 26<br>
+    for 268 weather stations (locations constant over time).",
+    "caption" = "<span style='font-family:Outfit Semibold'>Data:</span> DWD Open Data.
+    <span style='font-family:Outfit Semibold'>Visualization:</span> Ansgar Wolsing",
+    "fill" = "Schneehöhe in cm (Maximum)",
+    fill = "Snow depth in cm (max.)"
+  )
+)
 
-
+# Color palette for the snow depth scale
 darkgreen_to_white_pal <- colorRampPalette(c("#718373", "white"))
 
-p <- df_snow_xmas |> 
-  filter(has_snow_xmas) |> 
-  # exclude 2024
-  filter(year < 2024) |> 
-  mutate(
-    snow_xmas_max_grp = case_when(
-      snow_xmas_max <= 5 ~ "0.1-5 cm",
-      snow_xmas_max <= 10 ~ "6-10 cm",
-      snow_xmas_max <= 30 ~ "11-30 cm",
-      snow_xmas_max <= 50 ~ "31-50 cm",
-      TRUE ~ "> 50 cm"
-    ),
-    snow_xmas_max_grp = factor(
-      snow_xmas_max_grp,
-      levels = c("0.1-5 cm", "6-10 cm",  "11-30 cm", "31-50 cm", "> 50 cm"))
-  ) |> 
-  ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max_grp)) +
-  geom_sf(
-    data = shp,
-    fill = "#1D3A20", color = "#1D3A20", inherit.aes = FALSE
-  ) +
-  geom_point(
-    shape = 21, color = "grey20", stroke = 0.1, size = 0.8
-  ) +
-  scale_fill_manual(values = darkgreen_to_white_pal(5)) +
-  facet_wrap(vars(year), ncol = 10) +
-  guides(
-    fill = guide_legend(
-      title = "Schneehöhe in cm (Maximum)",
-      # title = "Snow depth in cm (max.)", 
-      title.position = "top", title.hjust = 0.5, nrow = 1,
-      override.aes = list(shape = 21, size = 4, color = "grey30"))
-  ) +
-  labs(
-    title = "Schnee an Weihnachten",
-    # title = "Dreaming of a White Christmas",
-    # subtitle = "Combined snow depth from December 24 to December 26<br>
-    # for 268 weather stations (locations constant over time).",
-    subtitle = "Maximale Schneehöhe vom 24.12. bis 26.12. pro Jahr
-    an 268 Wetterstationen (konstant über Zeit)",
-    # caption = "<span style='font-family:Outfit Semibold'>Data:</span> DWD Open Data.
-    # <span style='font-family:Outfit Semibold'>Visualization:</span> Ansgar Wolsing"
-    caption = "<span style='font-family:Outfit Semibold'>Daten:</span> DWD Offene Daten.
-    <span style='font-family:Outfit Semibold'>Visualisierung:</span> Ansgar Wolsing"
-  ) +
-  theme_void(base_family = "Outfit Light", base_size = 10) +
-  theme(
-    plot.background = element_rect(color = "grey95", fill = "grey95"),
-    plot.margin = margin(rep(4, 4)),
-    plot.title = element_markdown(
-      family = "Pinyon Script", size = 28, hjust = 0.5, color = "#A2231D"),
-    plot.subtitle = element_textbox(
-      width = 0.95, hjust = 0.5, halign = 0.5, lineheight = 1.1,
-      margin = margin(t = 2, b = 12)),
-    plot.caption = element_markdown(hjust = 0.5),
-    strip.text = element_text(
-      hjust = 0.5, family = "Outfit", size = 6,
-      margin = margin(t = 2, b = 1)),
-    legend.position = "bottom",
-    legend.direction = "horizontal",
-    legend.justification = "center",
-    legend.key.width = unit(5, "mm"),
-    legend.key.height = unit(2, "mm"),
-    legend.text = element_text(hjust = 0.5),
-    legend.text.align = 0.5
-  )
-ggsave(here(base_path, "plots", "snow-xmas-de-1961-2024.png"), 
-       dpi = 500, width = 4.25, height = 5.25, 
-       scale = 1.2)
+
+# Create the chart with titles for the given language in plot_titles
+plot_chart <- function(lang) {
+  stopifnot(lang %in% c("de", "en"))
+  
+  lang_titles <- plot_titles[[lang]]
+  
+  df_snow_xmas |> 
+    filter(has_snow_xmas) |> 
+    # exclude 2024
+    filter(year < 2024) |> 
+    mutate(
+      snow_xmas_max_grp = case_when(
+        snow_xmas_max <= 5 ~ "0.1-5 cm",
+        snow_xmas_max <= 10 ~ "6-10 cm",
+        snow_xmas_max <= 30 ~ "11-30 cm",
+        snow_xmas_max <= 50 ~ "31-50 cm",
+        TRUE ~ "> 50 cm"
+      ),
+      snow_xmas_max_grp = factor(
+        snow_xmas_max_grp,
+        levels = c("0.1-5 cm", "6-10 cm",  "11-30 cm", "31-50 cm", "> 50 cm"))
+    ) |> 
+    ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max_grp)) +
+    geom_sf(
+      data = shp,
+      fill = "#1D3A20", color = "#1D3A20", inherit.aes = FALSE
+    ) +
+    geom_point(
+      shape = 21, color = "grey20", stroke = 0.1, size = 0.8
+    ) +
+    scale_fill_manual(values = darkgreen_to_white_pal(5)) +
+    facet_wrap(vars(year), ncol = 10) +
+    guides(
+      fill = guide_legend(
+        title = lang_titles$fill, 
+        title.position = "top", title.hjust = 0.5, nrow = 1,
+        override.aes = list(shape = 21, size = 4, color = "grey30"))
+    ) +
+    labs(
+      title = lang_titles$title,
+      subtitle = lang_titles$subtitle,
+      caption = lang_titles$caption
+    ) +
+    theme_void(base_family = "Outfit Light", base_size = 10) +
+    theme(
+      plot.background = element_rect(color = "grey95", fill = "grey95"),
+      plot.margin = margin(rep(4, 4)),
+      plot.title = element_markdown(
+        family = "Pinyon Script", size = 28, hjust = 0.5, color = "#A2231D"),
+      plot.subtitle = element_textbox(
+        width = 0.95, hjust = 0.5, halign = 0.5, lineheight = 1.1,
+        margin = margin(t = 2, b = 12)),
+      plot.caption = element_markdown(hjust = 0.5),
+      strip.text = element_text(
+        hjust = 0.5, family = "Outfit", size = 6,
+        margin = margin(t = 2, b = 1)),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.justification = "center",
+      legend.key.width = unit(5, "mm"),
+      legend.key.height = unit(2, "mm"),
+      legend.text = element_text(hjust = 0.5),
+      legend.text.align = 0.5
+    )
+}
+
+p <- plot_chart("de")
+ggsave(here(base_path, "plots", "snow-xmas-de-1961-2023-de.png"), 
+       dpi = 500, width = 4.25, height = 5.25, scale = 1.2)
+
+p <- plot_chart("en")
+ggsave(here(base_path, "plots", "snow-xmas-de-1961-2023-en.png"), 
+       dpi = 500, width = 4.25, height = 5.25, scale = 1.2)
