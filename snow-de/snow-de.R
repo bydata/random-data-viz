@@ -117,16 +117,16 @@ plot_titles <- list(
     "subtitle" = "Maximale Schneehöhe vom 24.12. bis 26.12. pro Jahr
     an 268 Wetterstationen (Stationen konstant über Zeit)",
     "caption" = "<span style='font-family:Outfit Semibold'>Daten:</span> DWD Offene Daten.
-    <span style='font-family:Outfit Semibold'>Visualisierung:</span> Ansgar Wolsing"
+    <span style='font-family:Outfit Semibold'>Visualisierung:</span> Ansgar Wolsing",
+    "fill" = "Schneehöhe in cm (Maximum)"
   ),
   "en" = list(
     "title" = "Dreaming of a White Christmas",
-    "subtitle" = "Combined snow depth from December 24 to December 26<br>
-    for 268 weather stations (locations constant over time).",
+    "subtitle" = "Combined snow depth from December 24th to December 26th<br>
+    for 268 weather stations in Germany year by year since 1961",
     "caption" = "<span style='font-family:Outfit Semibold'>Data:</span> DWD Open Data.
     <span style='font-family:Outfit Semibold'>Visualization:</span> Ansgar Wolsing",
-    "fill" = "Schneehöhe in cm (Maximum)",
-    fill = "Snow depth in cm (max.)"
+    "fill" = "Snow depth in cm (max.)"
   )
 )
 
@@ -141,12 +141,13 @@ plot_chart <- function(lang) {
   lang_titles <- plot_titles[[lang]]
   
   df_snow_xmas |> 
+    # keep weather stations and years with snow
     filter(has_snow_xmas) |> 
     # exclude 2024
     filter(year < 2024) |> 
     mutate(
       snow_xmas_max_grp = case_when(
-        snow_xmas_max <= 5 ~ "0.1-5 cm",
+        snow_xmas_max <= 5 ~ "1-5 cm",
         snow_xmas_max <= 10 ~ "6-10 cm",
         snow_xmas_max <= 30 ~ "11-30 cm",
         snow_xmas_max <= 50 ~ "31-50 cm",
@@ -154,7 +155,7 @@ plot_chart <- function(lang) {
       ),
       snow_xmas_max_grp = factor(
         snow_xmas_max_grp,
-        levels = c("0.1-5 cm", "6-10 cm",  "11-30 cm", "31-50 cm", "> 50 cm"))
+        levels = c("1-5 cm", "6-10 cm",  "11-30 cm", "31-50 cm", "> 50 cm"))
     ) |> 
     ggplot(aes(geoLaenge, geoBreite, fill = snow_xmas_max_grp)) +
     geom_sf(
