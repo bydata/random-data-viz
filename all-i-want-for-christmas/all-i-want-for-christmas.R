@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ggtext)
-library(here)
 library(gganimate)
+library(here)
 
 #' https://en.wikipedia.org/wiki/All_I_Want_for_Christmas_Is_You#North_America
 
@@ -58,7 +58,7 @@ df_hot100_mariah |>
   ggplot(aes(date, rank, group = song)) +
   geom_point(
     aes(fill = song == alliwant, color = song == alliwant),
-    alpha = 0.7, shape = 21
+    alpha = 0.8, shape = 21
   ) +
   scale_y_reverse(limits = c(100, 1), expand = c(0, 0)) +
   scale_color_manual(values = c("FALSE" = "grey50", "TRUE" = "gold")) +
@@ -121,26 +121,27 @@ df_radio_hot100_mariah <- df_hot100_mariah |>
 # Annotations
 annotation_labels <- c(
   rep("The song was never released as a physical single,
-    making it not eligible for the Hot 100 before 1998.<br>
+    making it not eligible for the Hot 100 before 1998.
   It peaked at no. 12 in the <b>Radio Hot 100</b> in 1995.", 2),
   rep("In January 2000, it entered the <b style='color: gold'>Billboard Hot 100</b> 
-  for the 1st time, at no. 83", 2),
+  for the 1st time, at no. 83.", 2),
   rep("The song was considered a *recurrent single* and was thus ineligible for
     re-entry on the Billboard Hot 100.<br><br>
       **Digital Sales** showed its popularity, though.", 2),
-  rep("Since its re-entry in 2012, the song has been in the 
-      <b style='color: gold'>Billboard Hot 100</b> every year.", 2),
-  "*Since 2019**, the song has topped the <b style='color: gold'>Billboard Hot 100</b>
+  rep("Thanks to relaxed rules, the song made it back into the charts in 2012. 
+  Since then, the song has been in the 
+   <b style='color: gold'>Billboard Hot 100</b> every year.", 2),
+  "**Since 2019**, the song has topped the <b style='color: gold'>Billboard Hot 100</b>
   every Christmas season."
 )
 
 df_annotations <- data.frame(
-  year = c(1995, rep(2000, 2), rep(2004, 2), 
+  year = c(1994, rep(2000, 2), rep(2004, 2), 
            rep(2012, 2), rep(2019, 2)),
   # use a separate variable for x so that the original annotation does not move
   # with the animation
-  x = c(rep(1996, 2), rep(2000, 2), rep(2002, 2), rep(2012, 2), 2013),
-  y = c(1, 1, 83, 83, 31, 31, 45, 45, 33),
+  x = c(rep(1997, 2), rep(2000, 2), rep(2002, 2), rep(2012, 2), 2013),
+  y = c(1, 1, 83, 83, 25, 25, 45, 45, 36),
   label = annotation_labels
 )
 
@@ -149,6 +150,7 @@ bg_gradient <- grid::linearGradient(
   y1 = unit(1, "npc"), y2 = unit(0, "npc"))
 
 p <- df_radio_hot100_mariah |> 
+  mutate(type = fct_rev(type)) |> 
   ggplot(aes(year, peak_position, color = type, group = streak_id)) +
   geom_line(
     aes(linetype = type, linewidth = type),
@@ -161,7 +163,7 @@ p <- df_radio_hot100_mariah |>
     size = 3.5, family = "Fira Sans", box.size = 0, fill = "#ffffff33",
     color = "white"
   ) +
-  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
+  scale_x_continuous(breaks = seq(1990, 2024, 5)) +
   scale_y_reverse(
     breaks = c(1, seq(10, 100, 10)),
     limits = c(100, 1), expand = expansion(add = c(1, 0.5))) +
@@ -174,14 +176,15 @@ p <- df_radio_hot100_mariah |>
     "Hot Digital Songs" = "dotted", 
     "Radio Hot 100" = "dashed")) +
   scale_linewidth_manual(values = c(
-    "Billboard Hot 100" = 1.2, 
+    "Billboard Hot 100" = 1.6, 
     "Hot Digital Songs" = 0.7,
     "Radio Hot 100" = 0.7)) +
   coord_cartesian(clip = "off") +
   labs(
     title = "All I Want For Christmas Is A Number 1 Single",
-    subtitle = "How streaming and changed rules for eligibility have enabled
-    the incredible chart run by <i>All I Want For Christmas Is You</i>.",
+    subtitle = "How streaming and changing eligibility rules enabled the 
+    incredible chart run of Mariah Carey's
+    <i>'All I Want For Christmas Is You'</i>.",
     caption = "Source: Billboard (via User ludmin on Kaggle). 
     Visualization: Ansgar Wolsing",
     x = NULL,
@@ -194,27 +197,22 @@ p <- df_radio_hot100_mariah |>
     panel.grid.major.x = element_blank(),
     panel.grid.major.y = element_line(linewidth = 0.1),
     panel.grid.minor = element_blank(),
-    plot.margin = margin(rep(4, 4)),
+    plot.margin = margin(t = 8, b = 2, l = 4, r = 4),
     legend.position = "top",
+    legend.justification = "left",
+    legend.key.width = unit(8, "mm"),
     text = element_text(color = "white"),
     axis.text = element_text(color = "white"),
-    plot.title = element_markdown(size = 13, family = "Fira Sans SemiBold"),
+    plot.title = element_markdown(size = 15, family = "Fira Sans SemiBold"),
     plot.title.position = "plot",
     plot.subtitle = element_textbox(width = 0.95, lineheight = 1.3),
-    plot.caption = element_markdown(size = 6),
-    legend.key.width = unit(8, "mm")
+    plot.caption = element_markdown(size = 6)
   )
 p
 
 p_anim <- p +
   transition_reveal(year) +
   ease_aes("cubic-in-out")
-
-# Create a GIF
-animate(p_anim, 
-        end_pause = 20, nframes = 200,
-        width = 1200, height = 1200, res = 200)
-anim_save(here(base_path, "all-i-want-for-xmas.gif"))
 
 # Create an mp4
 animate(p_anim, 
