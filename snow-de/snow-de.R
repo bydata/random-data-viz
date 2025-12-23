@@ -3,7 +3,7 @@ library(lubridate)
 library(here)
 library(ggtext)
 #' https://github.com/brry/rdwd
-# rdwd::updateRdwd()
+rdwd::updateRdwd()
 library(rdwd)
 
 base_path <- "snow-de"
@@ -16,8 +16,12 @@ table(metaIndex$var)
 
 # Select stations which have been active at least since min_date and are currently active
 min_date <- as_date("1961-01-01")
+current_year <- 2025
 active_stations_meta <- metaIndex |>
-  filter(von_datum <= min_date & var == "kl" & res == "daily"
+  filter(
+    von_datum <= min_date 
+    & bis_datum >= as_date(paste(current_year - 1, 12, 26))
+    & var == "kl" & res == "daily"
          & per == "recent" & hasfile)
 n_active_stations <- nrow(active_stations_meta)
 
@@ -115,7 +119,7 @@ plot_titles <- list(
   "de" = list(
     "title" = "Schnee an Weihnachten",
     "subtitle" = "Maximale Schneehöhe vom 24.12. bis 26.12. pro Jahr
-    an 268 Wetterstationen (Stationen konstant über Zeit)",
+    an 239 Wetterstationen (Stationen konstant über Zeit)",
     "caption" = "<span style='font-family:Outfit Semibold'>Daten:</span> DWD Offene Daten.
     <span style='font-family:Outfit Semibold'>Visualisierung:</span> Ansgar Wolsing",
     "fill" = "Schneehöhe in cm (Maximum)"
@@ -123,7 +127,7 @@ plot_titles <- list(
   "en" = list(
     "title" = "Dreaming of a White Christmas",
     "subtitle" = "Combined snow depth from December 24th to December 26th<br>
-    for 268 weather stations in Germany year by year since 1961",
+    for 239 weather stations in Germany year by year since 1961",
     "caption" = "<span style='font-family:Outfit Semibold'>Data:</span> DWD Open Data.
     <span style='font-family:Outfit Semibold'>Visualization:</span> Ansgar Wolsing",
     "fill" = "Snow depth in cm (max.)"
@@ -143,8 +147,8 @@ plot_chart <- function(lang) {
   df_snow_xmas |> 
     # keep weather stations and years with snow
     filter(has_snow_xmas) |> 
-    # exclude 2024
-    filter(year < 2024) |> 
+    # exclude 2025
+    filter(year < 2025) |> 
     mutate(
       snow_xmas_max_grp = case_when(
         snow_xmas_max <= 5 ~ "1-5 cm",
@@ -181,7 +185,7 @@ plot_chart <- function(lang) {
     theme_void(base_family = "Outfit Light", base_size = 10) +
     theme(
       plot.background = element_rect(color = "grey95", fill = "grey95"),
-      plot.margin = margin(rep(4, 4)),
+      plot.margin = margin(4, 4, 4, 4),
       plot.title = element_markdown(
         family = "Pinyon Script", size = 28, hjust = 0.5, color = "#A2231D"),
       plot.subtitle = element_textbox(
@@ -202,9 +206,9 @@ plot_chart <- function(lang) {
 }
 
 p <- plot_chart("de")
-ggsave(here(base_path, "plots", "snow-xmas-de-1961-2023-de.png"), 
+ggsave(here(base_path, "plots", "snow-xmas-de-1961-2024-de.png"), 
        dpi = 500, width = 4.25, height = 5.25, scale = 1.2)
 
 p <- plot_chart("en")
-ggsave(here(base_path, "plots", "snow-xmas-de-1961-2023-en.png"), 
+ggsave(here(base_path, "plots", "snow-xmas-de-1961-2024-en.png"), 
        dpi = 500, width = 4.25, height = 5.25, scale = 1.2)
