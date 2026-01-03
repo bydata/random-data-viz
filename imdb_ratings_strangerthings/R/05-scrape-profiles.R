@@ -3,16 +3,19 @@ library(rvest)
 library(here)
 
 season <- 5 
-episode <- 7
-rating <- 9
+episode <- 1
+rating <- 10
 
 #==============================================================================
 
 base_path <- here("imdb_ratings_strangerthings")
 path_page_content <- here(base_path, "data", "imdb_review_pages")
 
+rating_padded <- str_pad(rating, width = 2, side = "left", pad = "0")
 
-page <- read_html(here(path_page_content, "S5E7", "S5E7_R09.html"))
+page <- read_html(here(path_page_content, 
+  sprintf("S%sE%s", season, episode),
+  sprintf("S%sE%s_R%s.html", season, episode, rating_padded)))
 
 author_a_xpath <- "//a[@data-testid='author-link']"
 nodes <- page |> 
@@ -36,7 +39,8 @@ df_reviews <- tibble(
   review_date = mdy(review_dates),
 )
 
-write_rds(df_reviews, here(base_path, "data", "reviews_S5E7_R09.rds"))
+write_rds(df_reviews, here(base_path, "data", 
+  sprintf("reviews_S%sE%s_R%s.rds", season, episode, rating_padded)))
 
 
 # Scrape user profiles
@@ -74,7 +78,11 @@ user_profile_data <- map(
     scrape_profile_safely(x)
   }
 )
-write_rds(user_profile_data, here(base_path, "data", "user_profile_data_s5e7_09.rds"))
+write_rds(
+  user_profile_data,
+  here(base_path, "data", 
+    sprintf("user_profile_data_s%se%s_%s.rds", season, episode, rating_padded))
+)
 
 
 showConnections(all = TRUE)
@@ -83,8 +91,13 @@ showConnections(all = TRUE)
 compact(transpose(user_profile_data)$error)
 
 user_profile_data <- set_names(user_profile_data, page_profile_ids)
-write_rds(user_profile_data, here(base_path, "data", "user_profile_data_s5e7_09.rds"))
+write_rds(
+  user_profile_data,
+  here(base_path, "data", 
+    sprintf("user_profile_data_s%se%s_%s.rds", season, episode, rating_padded))
+)
 
+# Create dataframe from the resulting list
 df_user_profile_data <- bind_rows(transpose(user_profile_data)$result) |> 
   add_column(
     profile_id = page_profile_ids,
@@ -98,7 +111,8 @@ df_user_profile_data <- bind_rows(transpose(user_profile_data)$result) |>
     join_date = as_date(str_sub(join_date, 1, 10))
   ) |> 
   select(profile_id, profile_url, everything())
-write_rds(df_user_profile_data, here(base_path, "data", "df_user_profile_data_s5e7_09.rds"))
-
-df_user_profile_data |> 
-  filter(join_date >= as_date("2025-12-26"))
+write_rds(
+  df_user_profile_data,
+  here(base_path, "data", 
+    sprintf("df_user_profile_data_s%se%s_%s.rds", season, episode, rating_padded))
+)
