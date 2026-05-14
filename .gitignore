@@ -33,3 +33,5 @@ vignettes/*.pdf
 # archives
 **/*.tsv.gz
 .DS_Store
+11freunde-trainerfluch/media/*.jpg
+verkehrsunfaelle/Verkehrsunfallkalender_Daten_2024.csv
