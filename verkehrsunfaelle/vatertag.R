@@ -83,7 +83,7 @@ df_polygons <- df_prep |>
 # Custom month label x positions
 month_labels <- df_prep |>
   group_by(monat) |>
-  summarize(x = mean(range(woche)), .groups = "drop")
+  summarize(x = mean(range(woche)))
 
 
 df_prep |> 
@@ -104,7 +104,7 @@ df_prep |>
   ) +
   scale_fill_gradient(low = "#FFF6E7", high = "#D91111") +
   coord_equal() +
-  facet_wrap(~jahr, ncol = 1, strip.position = "right") +
+  facet_wrap(vars(jahr), ncol = 1, strip.position = "right") +
   guides(
     fill = guide_colorbar(title.position = "top")
   ) +
