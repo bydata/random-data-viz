@@ -10,13 +10,17 @@ library(sf)
 #' Set a `country`, this will automate the download and data processing for that 
 #' particular country. 
 #' However, adjustments might be necessary:
-#' a) If a country has offshore areas (e.g. Netherlands, France) you might want to
-#'    limit the coordinate system using coord_sf()
+#' a) If a country has areas spread across the globe (e.g. Netherlands, France, 
+#'    also the US) you might want to limit the coordinate system using coord_sf()
 #' b) When saving the plot, the aspect ratio is determined from the rectangular 
 #'    bounding box of the country. Maybe needs some adjustments.
 #' c) Too many overlaps among text labels (ggrepel)
+#' d) The plot code will fail if there are more categories than avaiable colors 
+#'    in the color palette (9 colors). Increase the minimum value to built a category
+#'    in the call of fct_lump()
 #' 
 #' Note: Not checked for non-Latin-letter names
+
 
 # which country >>>>>
 country <- "Germany"
@@ -48,8 +52,9 @@ download_and_unzip_geonames <- function(country,
   if (!dir.exists(data_dir)) {
     dir.create(data_dir)
   }
-  
-  download.file(geonames_url, destfile = geonames_localfile_zip)
+  if (!file.exists(geonames_localfile_zip)) {
+    download.file(geonames_url, destfile = geonames_localfile_zip)  
+  }
   geonames_localfile <- unzip(geonames_localfile_zip, list = TRUE) %>% 
         filter(Name != "readme.txt")
   unzip(geonames_localfile_zip, exdir = data_dir)
@@ -86,8 +91,10 @@ places <- read_tsv(here::here(data_dir, filename),
 # Find all palindromes in the place names column
 places_palindromes <- places %>% 
   filter(is_palindrome(name)) %>% 
+  # filter(is_palindrome(name) | is_palindrome(asciiname)) %>% 
   filter(feature_class == "P") %>% # city, village etc., see http://www.geonames.org/export/codes.html
-  mutate(name2 = forcats::fct_lump_min(name, min = 2))
+  mutate(name2 = forcats::fct_lump_min(name, min = 4)) |> 
+  st_as_sf(coords = c("longitude", "latitude"), crs = "EPSG:4326")
 nrow(places_palindromes)
 
 # load country shape
@@ -95,80 +102,60 @@ shp <- rnaturalearth::ne_countries(scale = 10, country = country,
                                    returnclass = "sf")
 
 # determine a good aspect ratio to save the plot
-shorter_side_length <- 5
+min_width <- 8
+min_height <- 6
 bbox <- st_bbox(shp)
 width_height_ratio <- abs(bbox["xmax"] - bbox["xmin"]) / abs(bbox["ymax"] - bbox["ymin"])
 width_height_ratio <- unname(width_height_ratio)
 if (width_height_ratio > 1) {
-  width <- width_height_ratio * shorter_side_length
-  height <- shorter_side_length + 2.5  # add some for titles 
+  width <- width_height_ratio * min_height
+  height <- min_height + 1.5  # add some for titles 
 } else {
-  width <-  shorter_side_length
-  height <- shorter_side_length * width_height_ratio + 2.5 
+  width <-  min_width
+  height <- min_width * width_height_ratio + 1.5 
 }
 
 # Annotations
 plot_titles <- list(
-  title = glue::glue("Palindromic place names in {country}"),
-  subtitle = "Populated places according to GeoNames.org (feature class \"P\")",
+  title = glue::glue("Palindromic Places in {country}"),
+  subtitle = "Place names that are spelled the same way backward as forward.<br>
+  (Populated places according to GeoNames.org)",
   caption = "**Source:** GeoNames.org, Natural Earth Data | 
        **Visualization:** Ansgar Wolsing"
 )
 
+st_crs(shp)
+st_crs(places_palindromes)
+
 p1 <- ggplot(shp) +
-  geom_sf(size = 0.2) +
-  geom_point(data = places_palindromes,
-             aes(longitude, latitude),
-             shape = 21, color = "white", size = 3, fill = "grey12") +
-  ggrepel::geom_text_repel(data = places_palindromes,
-             aes(longitude, latitude, label = name),
-             family = "Helvetica Neue", color = "grey12", size = 3,
+  ggfx::with_shadow(
+    geom_sf(size = 0.2, fill = "grey90"),
+    x_offset = 8, y_offset = 8, colour = "grey12"
+  ) +
+  geom_sf(
+    data = places_palindromes,
+    shape = 21, color = "white", size = 3, fill = "grey12") +
+  ggrepel::geom_label_repel(data = places_palindromes,
+             aes(geometry = geometry, label = name),
+             stat = "sf_coordinates",
+             family = "Instrument Sans SemiBold", color = "grey12", size = 3,
+             segment.size = 0.5, segment.linetype = "dotted", 
+             fill = "#FFFFFF99", label.size = 0,
              max.overlaps = 20) +
+  coord_sf(crs = st_crs(shp)) +
   labs(title = plot_titles$title,
        subtitle = plot_titles$subtitle,
        caption = plot_titles$caption) +
-  cowplot::theme_map(font_family = "Helvetica Neue") +
+  cowplot::theme_map(font_family = "Instrument Sans") +
   theme(
-    plot.background = element_rect(color = NA, fill = "steelblue"),
-    panel.background = element_rect(color = NA, fill = NA),
-    text = element_text(color = "white"),
-    plot.caption = element_markdown()
+    plot.background = element_rect(color = NA, fill = "#f0c851"),
+    text = element_text(color = "black"),
+    plot.title = element_markdown(
+      family = "Libre Bodoni", size = 20, hjust = 0.5),
+    plot.subtitle = element_markdown(
+      hjust = 0.5, lineheight = 1.33),
+    plot.caption = element_markdown(hjust = 0.5)
   )
 ggsave(here::here("palindrome-places", "plots", 
                   glue::glue("palindrome_places_{country}.png")), 
-       dpi = 600, width = width, height = height)
-
-
-n_categories <- count(places_palindromes, name2, sort = TRUE) %>% 
-  filter(name2 != "Other") %>% 
-  nrow()
-
-p2 <- ggplot(shp) +
-  geom_sf(size = 0.2) +
-  geom_point(data = places_palindromes,
-             aes(longitude, latitude, fill = name2),
-             shape = 21, color = "white", size = 3, show.legend = FALSE) +
-  ggrepel::geom_text_repel(data = places_palindromes,
-                           aes(longitude, latitude, label = name, color = name2),
-                           family = "Helvetica Neue", 
-                           size = 3.5,
-                           max.overlaps = 20,
-                           show.legend = FALSE) +
-  scale_color_manual(values = c(RColorBrewer::brewer.pal(n_categories, "Set1"), "grey30"),
-                     aesthetics = c("fill", "color")) +
-  labs(title = plot_titles$title,
-       subtitle = plot_titles$subtitle,
-       caption = plot_titles$caption) +
-  cowplot::theme_map(font_family = "Helvetica Neue") +
-  theme(
-    plot.background = element_rect(color = NA, fill = "steelblue"),
-    panel.background = element_rect(color = NA, fill = NA),
-    text = element_text(color = "white"),
-    plot.caption = element_markdown()
-  )
-ggsave(here::here("palindrome-places", "plots", 
-                  glue::glue("palindrome_places_{country}-coloured.png")), 
-       dpi = 600, width = width, height = height) 
-
-count(places_palindromes, name, sort = TRUE)
-
+       dpi = 300, width = width, height = height)
