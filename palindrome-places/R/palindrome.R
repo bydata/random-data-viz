@@ -56,7 +56,7 @@ download_and_unzip_geonames <- function(country,
   if (!file.exists(geonames_localfile_zip)) {
     download.file(geonames_url, destfile = geonames_localfile_zip)  
   }
-  geonames_localfile <- unzip(geonames_localfile_zip, list = TRUE) %>% 
+  geonames_localfile <- unzip(geonames_localfile_zip, list = TRUE) |> 
         filter(Name != "readme.txt")
   unzip(geonames_localfile_zip, exdir = data_dir)
   
@@ -91,14 +91,14 @@ places <- read_tsv(here::here(data_dir, filename),
 
 # Find all palindromes in the place names column
 if (check_ascii) {
-  places_palindromes <- places %>% 
+  places_palindromes <- places |> 
     filter(is_palindrome(name) | is_palindrome(asciiname)) 
 } else {
-  places_palindromes <- places %>% 
+  places_palindromes <- places |> 
     filter(is_palindrome(name))
 }
-places_palindromes <- places_palindromes %>% 
-  filter(feature_class == "P") %>% # city, village etc., see http://www.geonames.org/export/codes.html
+places_palindromes <- places_palindromes |> 
+  filter(feature_class == "P") |> # city, village etc., see http://www.geonames.org/export/codes.html
   mutate(name2 = forcats::fct_lump_min(name, min = 4)) |> 
   st_as_sf(coords = c("longitude", "latitude"), crs = "EPSG:4326")
 nrow(places_palindromes)
