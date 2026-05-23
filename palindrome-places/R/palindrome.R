@@ -2,7 +2,6 @@ library(dplyr)
 library(ggplot2)
 library(ggtext)
 library(readr)
-library(osmdata)
 library(sf)
 
 
@@ -21,12 +20,14 @@ library(sf)
 #' 
 #' Note: Not checked for non-Latin-letter names
 
-
+####################### Input parameters ##########################
 # which country >>>>>
 country <- "Germany"
-
+# Check for ASCII version (i.e. "è" becomes "e") - TRUE/FALSE >>>>>
+check_ascii <- FALSE
 # where to store the data
 data_dir <- here::here("palindrome-places", "data")
+###################################################################
 
 
 # Checks if a string is a palindrome
@@ -89,9 +90,14 @@ places <- read_tsv(here::here(data_dir, filename),
                    ))
 
 # Find all palindromes in the place names column
-places_palindromes <- places %>% 
-  filter(is_palindrome(name)) %>% 
-  # filter(is_palindrome(name) | is_palindrome(asciiname)) %>% 
+if (check_ascii) {
+  places_palindromes <- places %>% 
+    filter(is_palindrome(name) | is_palindrome(asciiname)) 
+} else {
+  places_palindromes <- places %>% 
+    filter(is_palindrome(name))
+}
+places_palindromes <- places_palindromes %>% 
   filter(feature_class == "P") %>% # city, village etc., see http://www.geonames.org/export/codes.html
   mutate(name2 = forcats::fct_lump_min(name, min = 4)) |> 
   st_as_sf(coords = c("longitude", "latitude"), crs = "EPSG:4326")
