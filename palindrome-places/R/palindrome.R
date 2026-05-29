@@ -3,6 +3,11 @@ library(ggplot2)
 library(ggtext)
 library(readr)
 library(sf)
+library(forcats)
+library(rnaturalearth)
+library(countrycode)
+library(ggfx)
+library(ggrepel)
 
 
 ## INPUT
@@ -22,11 +27,11 @@ library(sf)
 
 ####################### Input parameters ##########################
 # which country >>>>>
-country <- "Germany"
+country <- "Belgium"
 # Check for ASCII version (i.e. "è" becomes "e") - TRUE/FALSE >>>>>
 check_ascii <- FALSE
 # where to store the data
-data_dir <- here::here("palindrome-places", "data")
+data_dir <- file.path("palindrome-places", "data")
 ###################################################################
 
 
@@ -44,11 +49,11 @@ is_palindrome <- function(s) {
 download_and_unzip_geonames <- function(country, 
                                         data_dir) {
   # get country code from English country name
-  country_code <- countrycode::countrycode(country,
+  country_code <- countrycode(country,
                                            origin = "country.name",
                                            destination = "iso2c")
-  geonames_url <- glue::glue("http://download.geonames.org/export/dump/{country_code}.zip")
-  geonames_localfile_zip <- here::here(data_dir, glue::glue("geonames_{tolower(country_code)}.zip"))
+  geonames_url <- sprintf("http://download.geonames.org/export/dump/%s.zip", country_code)
+  geonames_localfile_zip <- file.path(data_dir, sprintf("geonames_%s.zip", tolower(country_code)))
   
   if (!dir.exists(data_dir)) {
     dir.create(data_dir)
@@ -66,7 +71,7 @@ download_and_unzip_geonames <- function(country,
 filename <- download_and_unzip_geonames(country, data_dir = data_dir)
 filename
 
-places <- read_tsv(here::here(data_dir, filename),
+places <- read_tsv(file.path(data_dir, filename),
                    col_names = c(
                      "geonameid",
                      "name",
@@ -99,12 +104,12 @@ if (check_ascii) {
 }
 places_palindromes <- places_palindromes |> 
   filter(feature_class == "P") |> # city, village etc., see http://www.geonames.org/export/codes.html
-  mutate(name2 = forcats::fct_lump_min(name, min = 4)) |> 
+  mutate(name2 = fct_lump_min(name, min = 4)) |> 
   st_as_sf(coords = c("longitude", "latitude"), crs = "EPSG:4326")
 nrow(places_palindromes)
 
 # load country shape
-shp <- rnaturalearth::ne_countries(scale = 10, country = country, 
+shp <- ne_countries(scale = 10, country = country, 
                                    returnclass = "sf")
 
 # determine a good aspect ratio to save the plot
@@ -123,7 +128,7 @@ if (width_height_ratio > 1) {
 
 # Annotations
 plot_titles <- list(
-  title = glue::glue("Palindromic Places in {country}"),
+  title = sprintf("Palindromic Places in %s", country),
   subtitle = "Place names that are spelled the same way backward as forward.<br>
   (Populated places according to GeoNames.org)",
   caption = "**Source:** GeoNames.org, Natural Earth Data | 
@@ -134,14 +139,14 @@ st_crs(shp)
 st_crs(places_palindromes)
 
 p1 <- ggplot(shp) +
-  ggfx::with_shadow(
+  with_shadow(
     geom_sf(size = 0.2, fill = "grey90"),
     x_offset = 8, y_offset = 8, colour = "grey12"
   ) +
   geom_sf(
     data = places_palindromes,
     shape = 21, color = "white", size = 3, fill = "grey12") +
-  ggrepel::geom_label_repel(data = places_palindromes,
+  geom_label_repel(data = places_palindromes,
              aes(geometry = geometry, label = name),
              stat = "sf_coordinates",
              family = "Instrument Sans SemiBold", color = "grey12", size = 3,
@@ -152,16 +157,17 @@ p1 <- ggplot(shp) +
   labs(title = plot_titles$title,
        subtitle = plot_titles$subtitle,
        caption = plot_titles$caption) +
-  cowplot::theme_map(font_family = "Instrument Sans") +
+  theme_void(base_family = "Instrument Sans", base_size = 14) +
   theme(
     plot.background = element_rect(color = NA, fill = "#f0c851"),
     text = element_text(color = "black"),
     plot.title = element_markdown(
-      family = "Libre Bodoni", size = 20, hjust = 0.5),
+      family = "Libre Bodoni", face = "bold", size = 20, hjust = 0.5),
     plot.subtitle = element_markdown(
       hjust = 0.5, lineheight = 1.33),
-    plot.caption = element_markdown(hjust = 0.5)
+    plot.caption = element_markdown(hjust = 0.5),
+    plot.margin = margin(4, 4, 4, 4)
   )
-ggsave(here::here("palindrome-places", "plots", 
-                  glue::glue("palindrome_places_{country}.png")), 
+ggsave(file.path("palindrome-places", "plots", 
+                  sprintf("palindrome_places_%s.png", country)), 
        dpi = 300, width = width, height = height)
