@@ -17,21 +17,29 @@ library(ggrepel)
 #' a) If a country has areas spread across the globe (e.g. Netherlands, France, 
 #'    also the US) you might want to limit the coordinate system using coord_sf()
 #' b) When saving the plot, the aspect ratio is determined from the rectangular 
-#'    bounding box of the country. Maybe needs some adjustments.
+#'    bounding box of the country.
 #' c) Too many overlaps among text labels (ggrepel)
-#' d) The plot code will fail if there are more categories than avaiable colors 
+#' d) The plot code will fail if there are more categories than available colors 
 #'    in the color palette (9 colors). Increase the minimum value to built a category
 #'    in the call of fct_lump()
+#' e) Consider using inset maps if there are remote areas.
 #' 
 #' Note: Not checked for non-Latin-letter names
 
 ####################### Input parameters ##########################
 # which country >>>>>
-country <- "Belgium"
+country <- "Germany"
 # Check for ASCII version (i.e. "è" becomes "e") - TRUE/FALSE >>>>>
 check_ascii <- FALSE
+# Projection (default: EPSG:4326)
+proj <- "EPSG:4326"
+# plot background color
+color_bg <- "#f0c851"
+color_text <- "black"
 # where to store the data
 data_dir <- file.path("palindrome-places", "data")
+# where to save the image
+output_dir <- file.path("palindrome-places", "plots")
 ###################################################################
 
 
@@ -69,7 +77,6 @@ download_and_unzip_geonames <- function(country,
 }
 
 filename <- download_and_unzip_geonames(country, data_dir = data_dir)
-filename
 
 places <- read_tsv(file.path(data_dir, filename),
                    col_names = c(
@@ -103,21 +110,33 @@ if (check_ascii) {
     filter(is_palindrome(name))
 }
 places_palindromes <- places_palindromes |> 
-  filter(feature_class == "P") |> # city, village etc., see http://www.geonames.org/export/codes.html
+  # city, village etc., see http://www.geonames.org/export/codes.html
+  filter(feature_class == "P") |> 
   mutate(name2 = fct_lump_min(name, min = 4)) |> 
   st_as_sf(coords = c("longitude", "latitude"), crs = "EPSG:4326")
 nrow(places_palindromes)
 
 # load country shape
 shp <- ne_countries(scale = 10, country = country, 
-                                   returnclass = "sf")
+                    returnclass = "sf")
+
+# Transform projections
+shp <- st_transform(shp, crs = proj)
+places_palindromes <- st_transform(places_palindromes, crs = proj)
+
 
 # determine a good aspect ratio to save the plot
 min_width <- 8
 min_height <- 6
 bbox <- st_bbox(shp)
-mid_lat <- (bbox["ymin"] + bbox["ymax"]) / 2
-lon_correction <- cos(mid_lat * pi / 180)
+
+# Correction only in case of geographic coordinates 
+if (st_is_longlat(shp)) {
+  mid_lat <- (bbox["ymin"] + bbox["ymax"]) / 2
+  lon_correction <- cos(mid_lat * pi / 180)
+} else {
+  lon_correction <- 1
+}
 
 width_height_ratio <- (abs(bbox["xmax"] - bbox["xmin"]) * lon_correction) /
                        abs(bbox["ymax"] - bbox["ymin"])
@@ -132,8 +151,8 @@ if (width_height_ratio > 1) {
 }
 
 # clamp dimensions to maximum values
-max_width <- 16
-max_height <- 12
+max_width <- 12
+max_height <- 10
 scale_factor <- min(max_width / width, max_height / height, 1)
 width <- width * scale_factor
 height <- height * scale_factor
@@ -148,9 +167,6 @@ plot_titles <- list(
        **Visualization:** Ansgar Wolsing"
 )
 
-st_crs(shp)
-st_crs(places_palindromes)
-
 p1 <- ggplot(shp) +
   with_shadow(
     geom_sf(size = 0.2, fill = "grey90"),
@@ -159,21 +175,23 @@ p1 <- ggplot(shp) +
   geom_sf(
     data = places_palindromes,
     shape = 21, color = "white", size = 3, fill = "grey12") +
-  geom_label_repel(data = places_palindromes,
-             aes(geometry = geometry, label = name),
-             stat = "sf_coordinates",
-             family = "Instrument Sans SemiBold", color = "grey12", size = 3,
-             segment.size = 0.5, segment.linetype = "dotted", 
-             fill = "#FFFFFF99", label.size = 0,
-             max.overlaps = 20) +
-  coord_sf(crs = st_crs(shp)) +
-  labs(title = plot_titles$title,
-       subtitle = plot_titles$subtitle,
-       caption = plot_titles$caption) +
+  geom_label_repel(
+    data = places_palindromes,
+    aes(geometry = geometry, label = name),
+    stat = "sf_coordinates",
+    family = "Instrument Sans SemiBold", color = "grey12", size = 3,
+    segment.size = 0.5, segment.linetype = "dotted", 
+    fill = "#FFFFFF99", label.size = 0,
+    max.overlaps = 20) +
+  coord_sf(crs = proj) +
+  labs(
+    title = plot_titles$title,
+    subtitle = plot_titles$subtitle,
+    caption = plot_titles$caption) +
   theme_void(base_family = "Instrument Sans", base_size = 14) +
   theme(
-    plot.background = element_rect(color = NA, fill = "#f0c851"),
-    text = element_text(color = "black"),
+    plot.background = element_rect(color = NA, fill = color_bg),
+    text = element_text(color = color_text),
     plot.title = element_markdown(
       family = "Libre Bodoni", face = "bold", size = 20, hjust = 0.5),
     plot.subtitle = element_markdown(
@@ -181,6 +199,6 @@ p1 <- ggplot(shp) +
     plot.caption = element_markdown(hjust = 0.5),
     plot.margin = margin(4, 4, 4, 4)
   )
-ggsave(file.path("palindrome-places", "plots", 
+ggsave(file.path(output_dir,
                   sprintf("palindrome_places_%s.png", country)), 
        dpi = 300, width = width, height = height)
