@@ -116,15 +116,28 @@ shp <- ne_countries(scale = 10, country = country,
 min_width <- 8
 min_height <- 6
 bbox <- st_bbox(shp)
-width_height_ratio <- abs(bbox["xmax"] - bbox["xmin"]) / abs(bbox["ymax"] - bbox["ymin"])
+mid_lat <- (bbox["ymin"] + bbox["ymax"]) / 2
+lon_correction <- cos(mid_lat * pi / 180)
+
+width_height_ratio <- (abs(bbox["xmax"] - bbox["xmin"]) * lon_correction) /
+                       abs(bbox["ymax"] - bbox["ymin"])
 width_height_ratio <- unname(width_height_ratio)
+
 if (width_height_ratio > 1) {
   width <- width_height_ratio * min_height
-  height <- min_height + 1.5  # add some for titles 
+  height <- min_height + 1.5
 } else {
-  width <-  min_width
-  height <- min_width * width_height_ratio + 1.5 
+  width <- min_width
+  height <- min_width / width_height_ratio + 1.5
 }
+
+# clamp dimensions to maximum values
+max_width <- 16
+max_height <- 12
+scale_factor <- min(max_width / width, max_height / height, 1)
+width <- width * scale_factor
+height <- height * scale_factor
+
 
 # Annotations
 plot_titles <- list(
